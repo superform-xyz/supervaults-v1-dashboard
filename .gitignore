@@ -1,0 +1,7 @@
+.env.local
+.idea/
+.venv/
+venv/
+__pycache__/
+file_system_store/
+app.log
