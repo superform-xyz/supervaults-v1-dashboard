@@ -296,6 +296,9 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
             })
 
         if apy_data:
+            # Sort apy_data by Total APY in descending order
+            apy_data.sort(key=lambda x: x['Total APY'], reverse=True)
+            
             # Update bar chart layout
             fig_apy = go.Figure()
             symbols = [d['symbol'] for d in apy_data]
@@ -334,19 +337,19 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
                     tickformat='d',
                     tick0=5,
                     dtick=5,
-                    ticktext=[str(i) for i in range(5, 101, 5)],  
-                    tickvals=list(range(5, 101, 5)),  
+                    ticktext=[str(i) for i in range(5, 201, 5)],  
+                    tickvals=list(range(5, 201, 5)),  
                     range=[0, None] 
                 ),
                 margin=dict(t=80, b=50, l=20, r=20),
                 height=400,
                 autosize=True,
                 legend=dict(
-                    orientation="h",
+                    orientation="v", 
                     yanchor="top",
                     y=1,
-                    xanchor="center",
-                    x=0.5,
+                    xanchor="right",
+                    x=1,            
                     font=dict(size=12),
                     bgcolor='rgba(255, 255, 255, 0.1)'
                 ),
