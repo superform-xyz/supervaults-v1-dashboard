@@ -3,17 +3,16 @@ import json
 from dash import Dash, html, dcc
 import pandas as pd
 from web3 import Web3
+from functools import wraps
 from libraries.superform import SuperVault, SuperformAPI, SuperformConfig
 from libraries.morpho import Morpho
 from dash.dependencies import Input, Output
 import plotly.graph_objects as go
 import plotly.express as px
-import time
-from functools import wraps, lru_cache
-import requests.exceptions
 import random
 import logging
 import sys
+import time 
 
 # -----------------------------------------------------------------------------
 # Logging Configuration
@@ -464,6 +463,47 @@ def create_supervault_section(vault_data: dict) -> html.Div:
 # Main Application
 # -----------------------------------------------------------------------------
 
+# New function to load vaults directly
+def load_vaults():
+    try:
+        logger.info("Loading vaults")
+        supervaults = SuperformAPI().get_supervaults()
+        
+        if not supervaults:
+            logger.warning("No vaults data available")
+            return html.Div("No vaults data available. Please try again later.", 
+                          className='error-message')
+        
+        logger.info(f"Retrieved {len(supervaults)} supervaults")
+        
+        supervaults.sort(
+            key=lambda x: float(x['vault']['vault_statistics'].get('tvl_now', 0)),
+            reverse=True 
+        )
+        
+        sections = []
+        for vault_data in supervaults:
+            try:
+                section = create_supervault_section(vault_data)
+                if section is not None:
+                    sections.append(section)
+            except Exception as e:
+                logger.error(f"Error creating section for vault: {e}", exc_info=True)
+                continue
+        
+        if not sections:
+            logger.error("No sections were created successfully")
+            return html.Div("Error loading vaults. Please try again later.", 
+                          className='error-message')
+        
+        logger.info(f"Successfully created {len(sections)} vault sections")
+        return sections
+        
+    except Exception as e:
+        logger.error(f"Error loading vaults: {e}", exc_info=True)
+        return html.Div("Error loading vaults. Please try again later.", 
+                       className='error-message')
+
 def initialize_app():
     app = Dash(
         __name__, 
@@ -491,97 +531,22 @@ def initialize_app():
     
     app._favicon = 'superform.png'
     
+    vault_sections = load_vaults()
+    
     # Create layout
     app.layout = html.Div([
-        # Add store component for window width
         dcc.Store(id='window-width', storage_type='memory'),
-        
-        # Add interval component to trigger updates every 5 minutes (300000 milliseconds)
-        dcc.Interval(
-            id='interval-component',
-            interval=300000,
-            n_intervals=0
-        ),
-        
         create_header(),
         html.Div(style={'height': '2rem'}),
-        html.Div([
-            dcc.Loading(
-                id="loading-1",
-                type="circle",
-                color="#119DFF",
-                children=html.Div(id='vaults-container', className='vaults-container'),
-            ),
-        ], className='main-content'),
+        html.Div(
+            # Directly use vault_sections instead of wrapping in another list
+            vault_sections,
+            className='main-content'
+        ),
         create_footer()
     ], className='app-container')
-    
-    # Add caching decorator for API calls
-    @lru_cache(maxsize=1)
-    def get_cached_supervaults():
-        return SuperformAPI().get_supervaults()
 
-    def is_cache_valid(last_update_time):
-        return time.time() - last_update_time < CACHE_TIMEOUT
-
-    # Keep track of last update time
-    last_update = {'time': 0, 'data': None}
-
-    # Add callback to update the vaults data
-    @app.callback(
-        Output('vaults-container', 'children'),
-        Input('interval-component', 'n_intervals')
-    )
-    def update_vaults(_):
-        try:
-            logger.info("Starting vault update")
-            
-            # Check if cached data is still valid
-            if last_update['data'] is not None and is_cache_valid(last_update['time']):
-                logger.info("Using cached data")
-                supervaults = last_update['data']
-            else:
-                logger.info("Fetching fresh data")
-                supervaults = get_cached_supervaults()
-                last_update['time'] = time.time()
-                last_update['data'] = supervaults
-            
-            if not supervaults:
-                logger.warning("No vaults data available")
-                return html.Div("No vaults data available. Please try again later.", 
-                              className='error-message')
-            
-            logger.info(f"Retrieved {len(supervaults)} supervaults")
-            
-            supervaults.sort(
-                key=lambda x: float(x['vault']['vault_statistics'].get('tvl_now', 0)),
-                reverse=True 
-            )
-            
-            sections = []
-            for vault_data in supervaults:
-                try:
-                    section = create_supervault_section(vault_data)
-                    if section is not None:
-                        sections.append(section)
-                except Exception as e:
-                    logger.error(f"Error creating section for vault: {e}", exc_info=True)
-                    continue
-            
-            if not sections:
-                logger.error("No sections were created successfully")
-                return html.Div("Error loading vaults. Please try again later.", 
-                              className='error-message')
-            
-            logger.info(f"Successfully created {len(sections)} vault sections")
-            return sections
-            
-        except Exception as e:
-            logger.error(f"Error updating vaults: {e}", exc_info=True)
-            return html.Div("Error loading vaults. Please try again later.", 
-                           className='error-message')
-    
-    # Add clientside callback to update window width
+    # Add clientside callback for window width
     app.clientside_callback(
         """
         function() {
