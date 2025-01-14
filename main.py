@@ -6,7 +6,7 @@ from web3 import Web3
 from functools import wraps
 from libraries.superform import SuperVault, SuperformAPI, SuperformConfig
 from libraries.morpho import Morpho
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import plotly.express as px
 import random
@@ -541,16 +541,27 @@ def serve_layout():
     return html.Div([
         create_header(),
         html.Div(style={'height': '2rem'}),
-        html.Div(
-            load_vaults(),  
-            className='main-content'
-        ),
+        html.Div(id='loading-container', children=[
+            dcc.Loading(
+                id='loading',
+                children=[html.Div(id='main-content')],
+                type='circle',
+                parent_className='loading-parent'
+            ),
+        ], className='main-content'),
         create_footer()
     ], className='app-container')
 
 app.layout = serve_layout  
 
 server = app.server
+
+@app.callback(
+    Output('main-content', 'children'),
+    Input('loading', 'id')
+)
+def update_content(_):
+    return load_vaults()
 
 if __name__ == '__main__':
     app.run(debug=True)
