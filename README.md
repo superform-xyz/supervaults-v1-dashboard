@@ -7,7 +7,7 @@ A real-time dashboard built with Dash/Plotly to visualize and monitor SuperVault
 This dashboard provides a comprehensive view of SuperVaults, displaying:
 - Current allocations across whitelisted vaults
 - Performance metrics (APY, TVL)
-- Detailed Morpho market analytics including:
+- Detailed lending market analytics including:
   - Collateral asset allocation visualization
   - APY breakdown by asset (Base APY + Reward APR)
 
@@ -26,7 +26,6 @@ This dashboard provides a comprehensive view of SuperVaults, displaying:
 
 ## Features
 
-- **Real-time Data**: Updates every 5 minutes
 - **Interactive Charts**: 
   - Pie charts showing asset allocations
   - Stacked bar charts for APY breakdown
@@ -36,24 +35,3 @@ This dashboard provides a comprehensive view of SuperVaults, displaying:
   - Performance metrics
   - Direct links to Superform and protocol sites
 - **Responsive Design**: Optimized for both desktop and mobile viewing
-
-## Technical Stack
-
-- **Frontend**: Dash/Plotly
-- **Data Sources**:
-  - Superform API
-  - Morpho GraphQL API
-  - Web3 integration for on-chain data
-- **Key Libraries**:
-  - `dash`: Web application framework
-  - `plotly`: Data visualization
-  - `web3`: Blockchain interaction
-  - `pandas`: Data manipulation
-  - `gql`: GraphQL client
-
-## Architecture
-
-- **Caching**: Implements LRU cache with 5-minute timeout
-- **Error Handling**: Retry mechanism with exponential backoff
-- **Logging**: Configured for both console and file output
-- **Modular Design**: Separated into utility, UI, and chart components
