@@ -391,12 +391,10 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
 def create_supervault_section(vault_data: dict) -> html.Div:
     """Creates a section for a supervault including its whitelisted vaults"""
     try:
-        logger.info("Creating supervault section")
         vault_info = vault_data['vault']
         chain_id = vault_info['chain']['id']
         vault_address = vault_info['contract_address']
         
-        logger.info(f"Fetching data for vault {vault_address} on chain {chain_id}")
         supervault = SuperVault(chain_id, vault_address)
         whitelisted_vaults = supervault.get_whitelisted_vaults()
         vault_allocations = supervault.get_supervault_data()
@@ -458,7 +456,6 @@ def create_supervault_section(vault_data: dict) -> html.Div:
         return html.Div(section_children, className='supervault-section')
         
     except Exception as e:
-        logger.error(f"Error in create_supervault_section: {e}", exc_info=True)
         return html.Div(f"Error loading supervault section. Please try again later.", 
                        className='error-message')
 
