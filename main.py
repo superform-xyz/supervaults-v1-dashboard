@@ -50,7 +50,7 @@ COMMON_GRAPH_CONFIG = {
     'scrollZoom': False,
 }
 
-CACHE_TIMEOUT = 300  # 5 minutes in seconds
+CHART_FONT_FAMILY = "LabGrotesqueMono" 
 
 # -----------------------------------------------------------------------------
 # Utility Functions
@@ -245,7 +245,11 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
                 'x': 0.5,
                 'xanchor': 'center',
                 'yanchor': 'top',
-                'font': {'size': 14}
+                'font': {
+                    'size': 16,
+                    'family': CHART_FONT_FAMILY,
+                    'weight': 'bold'
+                }
             },
             height=500,
             autosize=True,
@@ -256,11 +260,12 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
                 y=-0.1,
                 xanchor="center",
                 x=0.5,
-                font=dict(size=12),
+                font=dict(size=12, family=CHART_FONT_FAMILY),
                 itemwidth=30,
                 itemsizing='constant'
             ),
-            margin=dict(t=50, b=50, l=20, r=20)
+            margin=dict(t=50, b=50, l=20, r=20),
+            font=dict(family=CHART_FONT_FAMILY)
         )
 
         # Get symbols with non-zero supply for APY graph
@@ -331,7 +336,11 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
                     'x': 0.5,
                     'xanchor': 'center',
                     'yanchor': 'top',
-                    'font': {'size': 14}
+                    'font': {
+                        'size': 16,
+                        'family': CHART_FONT_FAMILY,
+                        'weight': 'bold'
+                    }
                 },
                 barmode='stack',
                 yaxis=dict(
@@ -344,7 +353,8 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
                     dtick=5,
                     ticktext=[str(i) for i in range(5, 201, 5)],  
                     tickvals=list(range(5, 201, 5)),  
-                    range=[0, None] 
+                    range=[0, None],
+                    tickfont=dict(family=CHART_FONT_FAMILY)
                 ),
                 margin=dict(t=80, b=50, l=20, r=20),
                 height=400,
@@ -355,11 +365,12 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
                     y=1,
                     xanchor="right",
                     x=1,            
-                    font=dict(size=12),
+                    font=dict(size=12, family=CHART_FONT_FAMILY),
                     bgcolor='rgba(255, 255, 255, 0.1)'
                 ),
                 bargap=0.15,
-                bargroupgap=0.1
+                bargroupgap=0.1,
+                font=dict(family=CHART_FONT_FAMILY)
             )
 
             # Update hover template for both traces to show 2 decimal places
