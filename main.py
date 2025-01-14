@@ -18,13 +18,18 @@ import time
 # Logging Configuration
 # -----------------------------------------------------------------------------
 
-# Configure logging
+# Set higher logging level for noisy libraries
+logging.getLogger('urllib3').setLevel(logging.CRITICAL)
+logging.getLogger('graphql').setLevel(logging.CRITICAL)
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logging.getLogger('dash').setLevel(logging.ERROR)  
+
+# Configure our app logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('app.log')
+        logging.StreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger(__name__)
@@ -470,7 +475,6 @@ def load_vaults():
         supervaults = SuperformAPI().get_supervaults()
         
         if not supervaults:
-            logger.warning("No vaults data available")
             return html.Div("No vaults data available. Please try again later.", 
                           className='error-message')
         
@@ -488,11 +492,10 @@ def load_vaults():
                 if section is not None:
                     sections.append(section)
             except Exception as e:
-                logger.error(f"Error creating section for vault: {e}", exc_info=True)
+                logger.error(f"Error creating section for vault: {e}")
                 continue
         
         if not sections:
-            logger.error("No sections were created successfully")
             return html.Div("Error loading vaults. Please try again later.", 
                           className='error-message')
         
@@ -500,66 +503,53 @@ def load_vaults():
         return sections
         
     except Exception as e:
-        logger.error(f"Error loading vaults: {e}", exc_info=True)
+        logger.error(f"Error loading vaults: {e}")
         return html.Div("Error loading vaults. Please try again later.", 
                        className='error-message')
 
-def initialize_app():
-    app = Dash(
-        __name__, 
-        assets_folder='assets',
-        title='SuperVaults', 
-        update_title=None,
-        suppress_callback_exceptions=True,
-        meta_tags=[
-            # Responsive viewport
-            {
-                'name': 'viewport',
-                'content': 'width=device-width, initial-scale=1.0'
-            },
-            # General SEO
-            {
-                'name': 'description',
-                'content': 'View more information on SuperVaults. Transparently earn more on your crypto.'
-            },
-            {
-                'name': 'keywords',
-                'content': 'Superform, SuperVaults, DeFi, yield farming, automated investing, crypto'
-            },
-        ]
-    )
-    
-    app._favicon = 'superform.png'
-    
-    vault_sections = load_vaults()
-    
-    # Create layout
-    app.layout = html.Div([
-        dcc.Store(id='window-width', storage_type='memory'),
+# -----------------------------------------------------------------------------
+# App Initialization
+# -----------------------------------------------------------------------------
+
+app = Dash(
+    __name__, 
+    assets_folder='assets',
+    title='SuperVaults', 
+    update_title=None,
+    suppress_callback_exceptions=True,
+    meta_tags=[
+        # Responsive viewport
+        {
+            'name': 'viewport',
+            'content': 'width=device-width, initial-scale=1.0'
+        },
+        # General SEO
+        {
+            'name': 'description',
+            'content': 'View more information on SuperVaults. Transparently earn more on your crypto.'
+        },
+        {
+            'name': 'keywords',
+            'content': 'Superform, SuperVaults, DeFi, yield farming, automated investing, crypto'
+        },
+    ]
+)
+
+app._favicon = 'superform.png'
+
+def serve_layout():
+    return html.Div([
         create_header(),
         html.Div(style={'height': '2rem'}),
         html.Div(
-            # Directly use vault_sections instead of wrapping in another list
-            vault_sections,
+            load_vaults(),  
             className='main-content'
         ),
         create_footer()
     ], className='app-container')
 
-    # Add clientside callback for window width
-    app.clientside_callback(
-        """
-        function() {
-            return window.innerWidth;
-        }
-        """,
-        Output('window-width', 'data'),
-        Input('interval-component', 'n_intervals')
-    )
-    
-    return app
+app.layout = serve_layout  
 
-app = initialize_app()
 server = app.server
 
 if __name__ == '__main__':
