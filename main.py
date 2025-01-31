@@ -6,6 +6,7 @@ from web3 import Web3
 from functools import wraps
 from libraries.superform import SuperVault, SuperformAPI, SuperformConfig
 from libraries.morpho import Morpho
+from libraries.euler import Euler
 from dash.dependencies import Input, Output, State
 import plotly.graph_objects as go
 import plotly.express as px
@@ -399,6 +400,118 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
 
     return None
 
+def create_euler_charts(vault_info: dict) -> html.Div:
+    """Creates charts for Euler vault data"""
+    if not vault_info:
+        return None
+
+    charts_div = []
+    
+    # Extract key metrics
+    total_assets = float(vault_info.get('totalAssets', 0))
+    total_liability = float(vault_info.get('totalLiability', 0))
+    target_ltv = float(vault_info.get('targetLtv', 0))
+    min_ltv = float(vault_info.get('minLtv', 0))
+    max_ltv = float(vault_info.get('maxLtv', 0))
+    
+    # Calculate current LTV
+    current_ltv = (total_liability / total_assets * 100) if total_assets > 0 else 0
+    
+    # Create gauge chart for LTV
+    fig_ltv = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=current_ltv,
+        title={'text': "Current LTV %", 'font': {'size': 16, 'family': CHART_FONT_FAMILY}},
+        gauge={
+            'axis': {'range': [0, max_ltv], 'tickwidth': 1},
+            'bar': {'color': "rgb(26, 118, 255)"},
+            'steps': [
+                {'range': [0, min_ltv], 'color': 'rgba(0, 255, 0, 0.1)'},
+                {'range': [min_ltv, target_ltv], 'color': 'rgba(255, 255, 0, 0.1)'},
+                {'range': [target_ltv, max_ltv], 'color': 'rgba(255, 0, 0, 0.1)'}
+            ],
+            'threshold': {
+                'line': {'color': "red", 'width': 2},
+                'thickness': 0.75,
+                'value': max_ltv
+            }
+        }
+    ))
+    
+    fig_ltv.update_layout(
+        height=300,
+        margin=dict(t=30, b=0, l=30, r=30),
+        font=dict(family=CHART_FONT_FAMILY)
+    )
+    
+    # Create bar chart for assets and liabilities
+    fig_balance = go.Figure()
+    
+    fig_balance.add_trace(go.Bar(
+        x=['Assets'],
+        y=[total_assets],
+        name='Total Assets',
+        marker_color='rgb(55, 83, 109)'
+    ))
+    
+    fig_balance.add_trace(go.Bar(
+        x=['Liabilities'],
+        y=[total_liability],
+        name='Total Liabilities',
+        marker_color='rgb(26, 118, 255)'
+    ))
+    
+    fig_balance.update_layout(
+        title={
+            'text': 'Assets vs Liabilities',
+            'y': 0.95,
+            'x': 0.5,
+            'xanchor': 'center',
+            'yanchor': 'top',
+            'font': {
+                'size': 16,
+                'family': CHART_FONT_FAMILY,
+                'weight': 'bold'
+            }
+        },
+        yaxis=dict(
+            title='Amount',
+            tickformat='.2s',
+            showgrid=True,
+            gridcolor='rgba(0,0,0,0.1)',
+            tickfont=dict(family=CHART_FONT_FAMILY)
+        ),
+        height=400,
+        margin=dict(t=80, b=50, l=50, r=30),
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            font=dict(family=CHART_FONT_FAMILY)
+        ),
+        font=dict(family=CHART_FONT_FAMILY)
+    )
+
+    return html.Div([
+        html.Div([
+            dcc.Graph(
+                figure=fig_ltv,
+                config=COMMON_GRAPH_CONFIG,
+                responsive=True
+            ),
+        ], className='chart-column'),
+        html.Div([
+            dcc.Graph(
+                figure=fig_balance,
+                config=COMMON_GRAPH_CONFIG,
+                responsive=True
+            ),
+        ], className='chart-column'),
+    ], className='charts-container')
+
 # -----------------------------------------------------------------------------
 # Main Section Components
 # -----------------------------------------------------------------------------
@@ -437,29 +550,46 @@ def create_supervault_section(vault_data: dict) -> html.Div:
         # Sort by allocation
         whitelisted_vault_data.sort(key=lambda x: x[1], reverse=True)
         
-        # Simplified Morpho detection
-        morpho_charts = None
-        morpho_vaults = [
+        # Detect and create charts for protocols
+        charts = None
+        active_vaults = [
             (vault_data, alloc) for vault_data, alloc in whitelisted_vault_data
-            if (alloc > 0 and 
-                vault_data.get('protocol', {}).get('name', '').lower() == 'morpho')
+            if alloc > 0
         ]
         
-        if morpho_vaults:
-            vault_data, _ = morpho_vaults[0]
+        for vault_data, _ in active_vaults:
+            protocol_name = vault_data.get('protocol', {}).get('name', '').lower()
             vault_address = vault_data.get('contract_address')
-            if vault_address:
+            
+            if protocol_name == 'morpho' and vault_address:
                 morpho_data = Morpho().get_vault(vault_address)
                 if morpho_data:
-                    morpho_charts = create_morpho_charts(morpho_data)
+                    charts = create_morpho_charts(morpho_data)
+                    break
+            elif protocol_name == 'euler' and vault_address:
+                chain_id = vault_data.get('chain', {}).get('id')
+                if chain_id:
+                    euler_data = Euler(chain_id).get_vault(vault_address)
+                    if euler_data:
+                        charts = create_euler_charts(euler_data)
+                        break
+        
+        # TEMPORARY TEST CODE
+        # Mock an Euler vault for testing
+        for vault_data, _ in active_vaults:
+            # Force the first active vault to be treated as an Euler vault
+            vault_data['protocol'] = {'name': 'euler'}
+            vault_data['contract_address'] = '53060340969225659433018217397487773545571348696544826636871496'
+            vault_data['chain'] = {'id': 8453}  # Base chain ID
+            break
         
         # Create the section with charts at the top
         section_children = [create_supervault_header(vault_info)]
         
-        if morpho_charts:
+        if charts:
             section_children.extend([
                 html.Hr(),
-                morpho_charts
+                charts
             ])
         
         section_children.append(
