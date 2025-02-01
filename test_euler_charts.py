@@ -12,8 +12,8 @@ def test_euler_charts():
     # Initialize Euler client for Base
     euler = Euler(8453)  # Base chain ID
     
-    # Get vault data
-    vault_data = euler.get_vault(TEST_VAULT)
+    # Get vault LTV data
+    vault_data = euler.get_vault_ltv(TEST_VAULT)
     
     if vault_data:
         # Create charts
@@ -21,7 +21,7 @@ def test_euler_charts():
         
         # Create simple layout to display charts
         app.layout = html.Div([
-            html.H1("Euler Charts Test"),
+            html.H1("Euler LTV Charts Test"),
             charts if charts else html.Div("No charts generated")
         ])
         

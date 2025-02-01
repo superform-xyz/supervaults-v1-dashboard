@@ -7,59 +7,44 @@
                 "type": "address"
             }
         ],
-        "name": "getVaultInfoFull",
+        "name": "getRecognizedCollateralsLTVInfo",
         "outputs": [
             {
                 "components": [
                     {
                         "internalType": "address",
-                        "name": "vault",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "address",
-                        "name": "underlying",
+                        "name": "collateral",
                         "type": "address"
                     },
                     {
                         "internalType": "uint256",
-                        "name": "totalAssets",
+                        "name": "borrowLTV",
                         "type": "uint256"
                     },
                     {
                         "internalType": "uint256",
-                        "name": "totalShares",
+                        "name": "liquidationLTV",
                         "type": "uint256"
                     },
                     {
                         "internalType": "uint256",
-                        "name": "totalLiability",
+                        "name": "initialLiquidationLTV",
                         "type": "uint256"
                     },
                     {
                         "internalType": "uint256",
-                        "name": "riskFactor",
+                        "name": "targetTimestamp",
                         "type": "uint256"
                     },
                     {
                         "internalType": "uint256",
-                        "name": "targetLtv",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "minLtv",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "maxLtv",
+                        "name": "rampDuration",
                         "type": "uint256"
                     }
                 ],
-                "internalType": "struct VaultLens.VaultInfoFull",
+                "internalType": "struct VaultLens.LTVInfo[]",
                 "name": "",
-                "type": "tuple"
+                "type": "tuple[]"
             }
         ],
         "stateMutability": "view",

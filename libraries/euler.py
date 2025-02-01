@@ -1,5 +1,5 @@
 from web3 import Web3
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import json
 import os
 from dotenv import load_dotenv
@@ -64,20 +64,50 @@ class Euler:
             vault_info = self.lens_contract.functions.getVaultInfoFull(
                 self.w3.to_checksum_address(vault_address)
             ).call()
-            print(vault_info)
-            # Convert the tuple response to a more readable dictionary
+            
+            # Convert values to human-readable format using decimals
+            decimals = vault_info[4]  # vaultDecimals
+            
             return {
-                'address': vault_info[0],
-                'underlying': vault_info[1],
-                'totalAssets': vault_info[2],
-                'totalShares': vault_info[3],
-                'totalLiability': vault_info[4],
-                'riskFactor': vault_info[5],
-                'targetLtv': vault_info[6],
-                'minLtv': vault_info[7],
-                'maxLtv': vault_info[8]
+                'timestamp': vault_info[0],
+                'address': vault_info[1],
+                'name': vault_info[2],
+                'symbol': vault_info[3],
+                'decimals': decimals,
+                'asset': {
+                    'address': vault_info[5],
+                    'name': vault_info[6],
+                    'symbol': vault_info[7],
+                    'decimals': vault_info[8]
+                },
+                'totalShares': float(vault_info[9]) / (10 ** decimals),
+                'totalCash': float(vault_info[10]) / (10 ** decimals),
+                'totalBorrowed': float(vault_info[11]) / (10 ** decimals),
+                'totalAssets': float(vault_info[12]) / (10 ** decimals)
             }
             
         except Exception as e:
             print(f"Error fetching vault info: {e}")
+            return None
+
+    def get_vault_ltv(self, vault_address: str) -> Optional[List[Dict[str, Any]]]:
+        """
+        Get LTV information for recognized collaterals of an Euler vault.
+        """
+        try:
+            ltv_info = self.lens_contract.functions.getRecognizedCollateralsLTVInfo(
+                self.w3.to_checksum_address(vault_address)
+            ).call()
+            
+            return [{
+                'collateral': info[0],
+                'borrowLTV': info[1] / 100,  # Convert basis points to percentage
+                'liquidationLTV': info[2] / 100,
+                'initialLiquidationLTV': info[3] / 100,
+                'targetTimestamp': info[4],
+                'rampDuration': info[5]
+            } for info in ltv_info]
+            
+        except Exception as e:
+            print(f"Error fetching vault LTV info: {e}")
             return None

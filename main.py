@@ -8,6 +8,7 @@ from libraries.superform import SuperVault, SuperformAPI, SuperformConfig
 from libraries.morpho import Morpho
 from libraries.euler import Euler
 from dash.dependencies import Input, Output, State
+from typing import List, Dict, Any
 import plotly.graph_objects as go
 import plotly.express as px
 import random
@@ -400,98 +401,52 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
 
     return None
 
-def create_euler_charts(vault_info: dict) -> html.Div:
-    """Creates charts for Euler vault data"""
+def create_euler_charts(vault_info: List[Dict[str, Any]]) -> html.Div:
+    """Creates charts for Euler vault LTV data"""
     if not vault_info:
         return None
 
-    charts_div = []
+    # Create LTV comparison chart
+    fig_ltv = go.Figure()
     
-    # Extract key metrics
-    total_assets = float(vault_info.get('totalAssets', 0))
-    total_liability = float(vault_info.get('totalLiability', 0))
-    target_ltv = float(vault_info.get('targetLtv', 0))
-    min_ltv = float(vault_info.get('minLtv', 0))
-    max_ltv = float(vault_info.get('maxLtv', 0))
+    # Get shortened collateral addresses for labels
+    collaterals = [f"{info['collateral'][:6]}...{info['collateral'][-4:]}" for info in vault_info]
     
-    # Calculate current LTV
-    current_ltv = (total_liability / total_assets * 100) if total_assets > 0 else 0
-    
-    # Create gauge chart for LTV
-    fig_ltv = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=current_ltv,
-        title={'text': "Current LTV %", 'font': {'size': 16, 'family': CHART_FONT_FAMILY}},
-        gauge={
-            'axis': {'range': [0, max_ltv], 'tickwidth': 1},
-            'bar': {'color': "rgb(26, 118, 255)"},
-            'steps': [
-                {'range': [0, min_ltv], 'color': 'rgba(0, 255, 0, 0.1)'},
-                {'range': [min_ltv, target_ltv], 'color': 'rgba(255, 255, 0, 0.1)'},
-                {'range': [target_ltv, max_ltv], 'color': 'rgba(255, 0, 0, 0.1)'}
-            ],
-            'threshold': {
-                'line': {'color': "red", 'width': 2},
-                'thickness': 0.75,
-                'value': max_ltv
-            }
-        }
-    ))
-    
-    fig_ltv.update_layout(
-        height=300,
-        margin=dict(t=30, b=0, l=30, r=30),
-        font=dict(family=CHART_FONT_FAMILY)
-    )
-    
-    # Create bar chart for assets and liabilities
-    fig_balance = go.Figure()
-    
-    fig_balance.add_trace(go.Bar(
-        x=['Assets'],
-        y=[total_assets],
-        name='Total Assets',
+    # Add traces for different LTV types
+    fig_ltv.add_trace(go.Bar(
+        name='Borrow LTV',
+        x=collaterals,
+        y=[info['borrowLTV'] for info in vault_info],
         marker_color='rgb(55, 83, 109)'
     ))
     
-    fig_balance.add_trace(go.Bar(
-        x=['Liabilities'],
-        y=[total_liability],
-        name='Total Liabilities',
+    fig_ltv.add_trace(go.Bar(
+        name='Liquidation LTV',
+        x=collaterals,
+        y=[info['liquidationLTV'] for info in vault_info],
         marker_color='rgb(26, 118, 255)'
     ))
     
-    fig_balance.update_layout(
+    fig_ltv.add_trace(go.Bar(
+        name='Initial Liquidation LTV',
+        x=collaterals,
+        y=[info['initialLiquidationLTV'] for info in vault_info],
+        marker_color='rgb(200, 83, 109)'
+    ))
+    
+    fig_ltv.update_layout(
         title={
-            'text': 'Assets vs Liabilities',
+            'text': 'Collateral LTV Comparison',
             'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',
-            'yanchor': 'top',
-            'font': {
-                'size': 16,
-                'family': CHART_FONT_FAMILY,
-                'weight': 'bold'
-            }
+            'yanchor': 'top'
         },
-        yaxis=dict(
-            title='Amount',
-            tickformat='.2s',
-            showgrid=True,
-            gridcolor='rgba(0,0,0,0.1)',
-            tickfont=dict(family=CHART_FONT_FAMILY)
-        ),
-        height=400,
-        margin=dict(t=80, b=50, l=50, r=30),
-        showlegend=True,
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="right",
-            x=1,
-            font=dict(family=CHART_FONT_FAMILY)
-        ),
+        barmode='group',
+        yaxis_title='LTV %',
+        xaxis_tickangle=45,  # Angle the address labels for better readability
+        height=500,  # Increased height to accommodate angled labels
+        margin=dict(b=100),  # Increased bottom margin for labels
         font=dict(family=CHART_FONT_FAMILY)
     )
 
@@ -499,13 +454,6 @@ def create_euler_charts(vault_info: dict) -> html.Div:
         html.Div([
             dcc.Graph(
                 figure=fig_ltv,
-                config=COMMON_GRAPH_CONFIG,
-                responsive=True
-            ),
-        ], className='chart-column'),
-        html.Div([
-            dcc.Graph(
-                figure=fig_balance,
                 config=COMMON_GRAPH_CONFIG,
                 responsive=True
             ),
@@ -573,15 +521,6 @@ def create_supervault_section(vault_data: dict) -> html.Div:
                     if euler_data:
                         charts = create_euler_charts(euler_data)
                         break
-        
-        # TEMPORARY TEST CODE
-        # Mock an Euler vault for testing
-        for vault_data, _ in active_vaults:
-            # Force the first active vault to be treated as an Euler vault
-            vault_data['protocol'] = {'name': 'euler'}
-            vault_data['contract_address'] = '53060340969225659433018217397487773545571348696544826636871496'
-            vault_data['chain'] = {'id': 8453}  # Base chain ID
-            break
         
         # Create the section with charts at the top
         section_children = [create_supervault_header(vault_info)]
