@@ -38,7 +38,7 @@ CHART_FONT_FAMILY = "LabGrotesqueMono"
 # Utility Functions
 # -----------------------------------------------------------------------------
 
-def retry_with_backoff(retries=3, backoff_in_seconds=1, timeout=25):
+def retry_with_backoff(retries=3, backoff_in_seconds=1, timeout=55):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -474,9 +474,9 @@ def create_supervault_section(vault_data: dict) -> html.Div:
         superform_api = SuperformAPI()
         
         # Parallelize vault data fetching with limited concurrency
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             # Process in smaller batches to avoid rate limits
-            batch_size = 2
+            batch_size = 3
             whitelisted_vault_data = []
             
             for i in range(0, len(whitelisted_vaults), batch_size):
@@ -496,7 +496,7 @@ def create_supervault_section(vault_data: dict) -> html.Div:
                         continue
                 
                 # Add a small delay between batches
-                time.sleep(0.1)
+                time.sleep(0.05)
                 
         api_time = time.time() - api_start
         print(f"Fetching whitelisted vault data: {api_time:.2f}s")
@@ -579,7 +579,7 @@ def load_vaults():
         print(f"Sorting vaults: {sort_time:.2f}s")
         
         # Process sections in parallel
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             future_to_vault = {
                 executor.submit(create_supervault_section, vault_data): (i, vault_data)
                 for i, vault_data in enumerate(supervaults)
