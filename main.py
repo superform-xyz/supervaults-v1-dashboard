@@ -11,30 +11,10 @@ from dash.dependencies import Input, Output, State
 from typing import List, Dict, Any
 import plotly.graph_objects as go
 import plotly.express as px
+import concurrent.futures
 import random
-import logging
 import sys
 import time 
-
-# -----------------------------------------------------------------------------
-# Logging Configuration
-# -----------------------------------------------------------------------------
-
-# Set higher logging level for noisy libraries
-logging.getLogger('urllib3').setLevel(logging.CRITICAL)
-logging.getLogger('graphql').setLevel(logging.CRITICAL)
-logging.getLogger('werkzeug').setLevel(logging.ERROR)
-logging.getLogger('dash').setLevel(logging.ERROR)  
-
-# Configure our app logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger(__name__)
 
 # -----------------------------------------------------------------------------
 # Constants and Configurations
@@ -58,21 +38,25 @@ CHART_FONT_FAMILY = "LabGrotesqueMono"
 # Utility Functions
 # -----------------------------------------------------------------------------
 
-def retry_with_backoff(retries=3, backoff_in_seconds=1):
+def retry_with_backoff(retries=3, backoff_in_seconds=1, timeout=25):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             x = 0
             while True:
                 try:
+                    # Add timeout to ensure we don't hit Heroku's 30s limit
+                    start_time = time.time()
+                    if time.time() - start_time > timeout:
+                        raise TimeoutError("Operation timed out")
                     return func(*args, **kwargs)
                 except Exception as e:
                     if x == retries:
-                        logger.error(f"Failed after {retries} attempts: {str(e)}")
+                        print(f"Failed after {retries} attempts: {str(e)}")
                         raise
                     wait = (backoff_in_seconds * 2 ** x + 
                            random.uniform(0, 1))
-                    logger.warning(f"Attempt {x + 1} failed, retrying in {wait:.2f}s: {str(e)}")
+                    print(f"Attempt {x + 1} failed, retrying in {wait:.2f}s: {str(e)}")
                     time.sleep(wait)
                     x += 1
         return wrapper
@@ -138,7 +122,6 @@ def create_supervault_header(vault_info: dict) -> html.Div:
         ], className='supervault-header', style={'borderColor': chain_color})
         
     except Exception as e:
-        print(f"Error creating supervault header: {e}")
         return html.Div("Error loading supervault header", className='error-header')
 
 def create_vault_tile(vault_info, allocation_percentage):
@@ -467,14 +450,18 @@ def create_euler_charts(vault_info: List[Dict[str, Any]]) -> html.Div:
 @retry_with_backoff()
 def create_supervault_section(vault_data: dict) -> html.Div:
     """Creates a section for a supervault including its whitelisted vaults"""
+    start_time = time.time()
     try:
         vault_info = vault_data['vault']
         chain_id = vault_info['chain']['id']
         vault_address = vault_info['contract_address']
         
+        sv_start = time.time()
         supervault = SuperVault(chain_id, vault_address)
         whitelisted_vaults = supervault.get_whitelisted_vaults()
         vault_allocations = supervault.get_supervault_data()
+        sv_time = time.time() - sv_start
+        print(f"SuperVault operations: {sv_time:.2f}s")
         
         # Create allocation mapping
         allocation_map = {}
@@ -483,17 +470,36 @@ def create_supervault_section(vault_data: dict) -> html.Div:
             allocation_map = {str(id_): (alloc / 100) 
                             for id_, alloc in zip(superform_ids, allocations)}
         
-        # Get data for each whitelisted vault
+        api_start = time.time()
         superform_api = SuperformAPI()
-        whitelisted_vault_data = []
-        for superform_id in whitelisted_vaults:
-            try:
-                vault_data = superform_api.get_vault_data(superform_id)
-                allocation = allocation_map.get(str(superform_id), 0)
-                whitelisted_vault_data.append((vault_data, allocation))
-            except Exception as e:
-                print(f"Error fetching vault data for {superform_id}: {e}")
-                continue
+        
+        # Parallelize vault data fetching with limited concurrency
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            # Process in smaller batches to avoid rate limits
+            batch_size = 2
+            whitelisted_vault_data = []
+            
+            for i in range(0, len(whitelisted_vaults), batch_size):
+                batch = whitelisted_vaults[i:i+batch_size]
+                future_to_id = {
+                    executor.submit(superform_api.get_vault_data, superform_id): superform_id 
+                    for superform_id in batch
+                }
+                
+                for future in concurrent.futures.as_completed(future_to_id):
+                    superform_id = future_to_id[future]
+                    try:
+                        vault_data = future.result()
+                        allocation = allocation_map.get(str(superform_id), 0)
+                        whitelisted_vault_data.append((vault_data, allocation))
+                    except Exception:
+                        continue
+                
+                # Add a small delay between batches
+                time.sleep(0.1)
+                
+        api_time = time.time() - api_start
+        print(f"Fetching whitelisted vault data: {api_time:.2f}s")
         
         # Sort by allocation
         whitelisted_vault_data.sort(key=lambda x: x[1], reverse=True)
@@ -538,52 +544,70 @@ def create_supervault_section(vault_data: dict) -> html.Div:
             ], className='vault-grid')
         )
         
+        total_time = time.time() - start_time
+        print(f"Section complete: {total_time:.2f}s")
         return html.Div(section_children, className='supervault-section')
         
-    except Exception as e:
-        return html.Div(f"Error loading supervault section. Please try again later.", 
+    except Exception:
+        return html.Div("Error loading supervault section. Please try again later.", 
                        className='error-message')
 
 # -----------------------------------------------------------------------------
 # Main Application
 # -----------------------------------------------------------------------------
 
-# New function to load vaults directly
 def load_vaults():
     try:
-        logger.info("Loading vaults")
+        start_time = time.time()
+        print("\nLoading vaults...")
+        
+        api_start = time.time()
         supervaults = SuperformAPI().get_supervaults()
+        api_time = time.time() - api_start
+        print(f"SuperformAPI.get_supervaults: {api_time:.2f}s")
         
         if not supervaults:
             return html.Div("No vaults data available. Please try again later.", 
                           className='error-message')
         
-        logger.info(f"Retrieved {len(supervaults)} supervaults")
-        
+        sort_start = time.time()
         supervaults.sort(
             key=lambda x: float(x['vault']['vault_statistics'].get('tvl_now', 0)),
             reverse=True 
         )
+        sort_time = time.time() - sort_start
+        print(f"Sorting vaults: {sort_time:.2f}s")
         
-        sections = []
-        for vault_data in supervaults:
-            try:
-                section = create_supervault_section(vault_data)
-                if section is not None:
-                    sections.append(section)
-            except Exception as e:
-                logger.error(f"Error creating section for vault: {e}")
-                continue
+        # Process sections in parallel
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            future_to_vault = {
+                executor.submit(create_supervault_section, vault_data): (i, vault_data)
+                for i, vault_data in enumerate(supervaults)
+            }
+            
+            sections = []
+            for future in concurrent.futures.as_completed(future_to_vault):
+                i, _ = future_to_vault[future]
+                try:
+                    section = future.result()
+                    if section is not None:
+                        sections.append((i, section))
+                except Exception:
+                    continue
+                
+        # Sort sections back into original order
+        sections.sort(key=lambda x: x[0])
+        sections = [section for _, section in sections]
         
         if not sections:
             return html.Div("Error loading vaults. Please try again later.", 
                           className='error-message')
         
-        logger.info(f"Successfully created {len(sections)} vault sections")
+        total_time = time.time() - start_time
+        print(f"Total time: {total_time:.2f}s\n")
         return sections
         
-    except Exception as e:
-        logger.error(f"Error loading vaults: {e}")
+    except Exception:
         return html.Div("Error loading vaults. Please try again later.", 
                        className='error-message')
 
