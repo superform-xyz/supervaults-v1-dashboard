@@ -596,28 +596,124 @@ def create_supervault_section(vault_data: dict) -> html.Div:
 # Main Application
 # -----------------------------------------------------------------------------
 
+def process_vault_data(vault_data, all_vaults_data, vault_instances):
+    """Process a single vault's data without concurrency since we're just doing memory lookups"""
+    try:
+        process_metrics = {}
+        process_start = time.time()
+
+        vault_info = vault_data.get('vault')
+        if not vault_info:
+            return None
+        
+        vault_address = vault_info['contract_address']
+        supervault = vault_instances[vault_address]
+        
+        # Time blockchain calls
+        blockchain_start = time.time()
+        whitelisted_vaults = supervault.get_whitelisted_vaults()
+        vault_allocations = supervault.get_supervault_data()
+        process_metrics['blockchain_calls'] = time.time() - blockchain_start
+        
+        if not whitelisted_vaults or not vault_allocations or len(vault_allocations) != 2:
+            return None
+        
+        # Time data processing
+        processing_start = time.time()
+        superform_ids, allocations = vault_allocations
+        allocation_map = {str(id_): (alloc / 100) 
+                        for id_, alloc in zip(superform_ids, allocations)}
+        
+        # Simple memory lookup for each vault
+        whitelisted_vault_data = []
+        for superform_id in whitelisted_vaults:
+            vault = next(
+                (v for v in all_vaults_data if str(v.get('superform_id')) == str(superform_id)), 
+                None
+            )
+            if vault:
+                allocation = allocation_map.get(str(superform_id), 0)
+                whitelisted_vault_data.append((vault, allocation))
+            else:
+                print(f"Vault {superform_id} not found in pre-fetched data")
+        process_metrics['data_processing'] = time.time() - processing_start
+
+        # Time protocol-specific API calls
+        protocol_start = time.time()
+        charts_data = None
+        active_vaults = [(v, a) for v, a in whitelisted_vault_data if a > 0]
+        
+        for vault_data, _ in active_vaults:
+            protocol_name = vault_data.get('protocol', {}).get('name', '').lower()
+            vault_address = vault_data.get('contract_address')
+            
+            try:
+                if protocol_name == 'morpho' and vault_address:
+                    morpho_data = Morpho().get_vault(vault_address)
+                    if morpho_data:
+                        charts_data = ('morpho', morpho_data)
+                        break
+                elif protocol_name == 'euler' and vault_address:
+                    chain_id = vault_data.get('chain', {}).get('id')
+                    if chain_id:
+                        euler_data = Euler(chain_id).get_vault(vault_address)
+                        if euler_data:
+                            charts_data = ('euler', euler_data)
+                            break
+            except Exception as e:
+                print(f"Error fetching protocol data for {protocol_name}: {str(e)}")
+                continue
+        process_metrics['protocol_calls'] = time.time() - protocol_start
+        
+        if not whitelisted_vault_data:
+            print("No whitelisted vault data available")
+            return None
+
+        # Time UI creation
+        ui_start = time.time()
+        section = create_supervault_section_ui(vault_info, whitelisted_vault_data, charts_data)
+        process_metrics['ui_creation'] = time.time() - ui_start
+        
+        process_metrics['total'] = time.time() - process_start
+        print(f"\nVault {vault_address} processing times:")
+        print(f"  Blockchain calls: {process_metrics['blockchain_calls']:.2f}s")
+        print(f"  Data processing: {process_metrics['data_processing']:.2f}s")
+        print(f"  Protocol calls: {process_metrics['protocol_calls']:.2f}s")
+        print(f"  UI creation: {process_metrics['ui_creation']:.2f}s")
+        print(f"  Total: {process_metrics['total']:.2f}s")
+        
+        return section
+        
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return None
+
 def load_vaults():
     try:
         start_time = time.time()
         print("\n=== Performance Metrics ===")
         
-        # Get supervaults
+        # Get supervaults and all vaults data at the start
         api_start = time.time()
-        supervaults = SuperformAPI().get_supervaults()
+        shared_api = SuperformAPI()
+        
+        # Fetch both supervaults and all vaults data in parallel (using 2 of 4 available threads)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            future_supervaults = executor.submit(shared_api.get_supervaults)
+            future_all_vaults = executor.submit(shared_api.get_vaults)
+            
+            supervaults = future_supervaults.result()
+            all_vaults_data = future_all_vaults.result()
+        
+        if not supervaults or not all_vaults_data:
+            raise ValueError("Failed to fetch required data from API")
+            
         supervaults.sort(key=lambda x: 0 if x['vault']['chain']['id'] == 1 else 1)
-        
         print(f"API Init: {time.time() - api_start:.2f}s")
-        
-        if not supervaults:
-            raise ValueError("No supervaults data received from API")
-        
-        time.sleep(0.5)
         
         # Initialize vault instances
         init_start = time.time()
         vault_instances = {}
-        shared_api = SuperformAPI()
-        
         for vault_data in supervaults[:15]:
             try:
                 vault_info = vault_data['vault']
@@ -633,103 +729,17 @@ def load_vaults():
         if not vault_instances:
             raise ValueError("No vault instances could be initialized")
         
-        def process_vault_data(vault_data, delay_start=0):
-            try:
-                process_start = time.time()
-                if delay_start > 0:
-                    time.sleep(delay_start)
-                    
-                vault_info = vault_data.get('vault')
-                if not vault_info:
-                    return None
-                
-                vault_address = vault_info['contract_address']
-                supervault = vault_instances[vault_address]
-                
-                # Parallel fetch of whitelisted vaults and allocations
-                with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-                    future_whitelisted = executor.submit(supervault.get_whitelisted_vaults)
-                    future_allocations = executor.submit(supervault.get_supervault_data)
-                    
-                    whitelisted_vaults = future_whitelisted.result(timeout=10)
-                    vault_allocations = future_allocations.result(timeout=10)
-                
-                if not whitelisted_vaults or not vault_allocations or len(vault_allocations) != 2:
-                    return None
-                
-                superform_ids, allocations = vault_allocations
-                allocation_map = {str(id_): (alloc / 100) 
-                                for id_, alloc in zip(superform_ids, allocations)}
-                
-                # Fetch vault data in parallel batches
-                whitelisted_vault_data = []
-                with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-                    futures = [
-                        executor.submit(
-                            retry_with_backoff(retries=2, backoff_in_seconds=1)(
-                                shared_api.get_vault_data
-                            ),
-                            superform_id
-                        )
-                        for superform_id in whitelisted_vaults
-                    ]
-                    
-                    for future, superform_id in zip(futures, whitelisted_vaults):
-                        try:
-                            vault_data = future.result(timeout=10)
-                            if vault_data:
-                                allocation = allocation_map.get(str(superform_id), 0)
-                                whitelisted_vault_data.append((vault_data, allocation))
-                        except Exception as e:
-                            print(f"Error fetching vault {superform_id}: {str(e)}")
-                
-                # Get protocol-specific data
-                charts_data = None
-                active_vaults = [(v, a) for v, a in whitelisted_vault_data if a > 0]
-                
-                for vault_data, _ in active_vaults:
-                    protocol_name = vault_data.get('protocol', {}).get('name', '').lower()
-                    vault_address = vault_data.get('contract_address')
-                    
-                    try:
-                        if protocol_name == 'morpho' and vault_address:
-                            morpho_data = Morpho().get_vault(vault_address)
-                            if morpho_data:
-                                charts_data = ('morpho', morpho_data)
-                                break
-                        elif protocol_name == 'euler' and vault_address:
-                            chain_id = vault_data.get('chain', {}).get('id')
-                            if chain_id:
-                                euler_data = Euler(chain_id).get_vault(vault_address)
-                                if euler_data:
-                                    charts_data = ('euler', euler_data)
-                                    break
-                        time.sleep(0.1)
-                    except Exception as e:
-                        print(f"Error fetching protocol data for {protocol_name}: {str(e)}")
-                        continue
-                
-                # Before creating UI, verify we have all needed data
-                if not whitelisted_vault_data:
-                    print("No whitelisted vault data available")
-                    return None
-                
-                print(f"Vault Processing: {time.time() - process_start:.2f}s")
-                return create_supervault_section_ui(vault_info, whitelisted_vault_data, charts_data)
-                
-            except Exception as e:
-                print(f"Error: {str(e)}")
-                return None
-        
-        # Process vaults
+        # Process vaults in parallel (using all 4 available threads)
         processing_start = time.time()
         sections = {}
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
             future_to_vault = {
                 executor.submit(
                     process_vault_data, 
                     vault_data,
-                    delay_start=i * 1.0
+                    all_vaults_data,
+                    vault_instances
                 ): i
                 for i, vault_data in enumerate(supervaults[:15])
                 if vault_data['vault']['contract_address'] in vault_instances
@@ -738,43 +748,13 @@ def load_vaults():
             for future in concurrent.futures.as_completed(future_to_vault):
                 i = future_to_vault[future]
                 try:
-                    section = future.result(timeout=60)
+                    section = future.result()
                     if section is not None:
                         sections[i] = section
                 except Exception as e:
                     print(f"Failed vault {i}: {str(e)}")
         
-        print(f"Initial Processing: {time.time() - processing_start:.2f}s")
-        
-        # Retry failed sections if any
-        retry_start = time.time()
-        failed_indices = [
-            i for i, vault_data in enumerate(supervaults[:15])
-            if i not in sections and vault_data['vault']['contract_address'] in vault_instances
-        ]
-        
-        if failed_indices:
-            print(f"\n=== Retrying {len(failed_indices)} Vaults ===")
-            for retry_attempt in range(2):
-                if not failed_indices:
-                    break
-                
-                still_failed = []
-                for i in failed_indices:
-                    try:
-                        section = process_vault_data(supervaults[i])
-                        if section is not None:
-                            sections[i] = section
-                        else:
-                            still_failed.append(i)
-                        time.sleep(0.5)
-                    except Exception as e:
-                        still_failed.append(i)
-                
-                failed_indices = still_failed
-            
-            print(f"Retry Processing: {time.time() - retry_start:.2f}s")
-        
+        print(f"Processing: {time.time() - processing_start:.2f}s")
         print(f"Total Time: {time.time() - start_time:.2f}s\n")
         
         sorted_sections = [section for i, section in sorted(sections.items())]
