@@ -38,25 +38,25 @@ CHART_FONT_FAMILY = "LabGrotesqueMono"
 # Utility Functions
 # -----------------------------------------------------------------------------
 
-def retry_with_backoff(retries=3, backoff_in_seconds=1, timeout=55):
+def retry_with_backoff(retries=3, backoff_in_seconds=1, timeout=20):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
             x = 0
             while True:
                 try:
-                    # Add timeout to ensure we don't hit Heroku's 30s limit
+                    # Add timeout to ensure we don't hit Heroku's 25s limit
                     start_time = time.time()
                     if time.time() - start_time > timeout:
                         raise TimeoutError("Operation timed out")
                     return func(*args, **kwargs)
                 except Exception as e:
                     if x == retries:
-                        print(f"Failed after {retries} attempts: {str(e)}")
+                        print(f"Failed after {retries} attempts")
                         raise
                     wait = (backoff_in_seconds * 2 ** x + 
                            random.uniform(0, 1))
-                    print(f"Attempt {x + 1} failed, retrying in {wait:.2f}s: {str(e)}")
+                    print(f"Attempt {x + 1} failed, retrying in {wait:.2f}s")
                     time.sleep(wait)
                     x += 1
         return wrapper
@@ -474,9 +474,8 @@ def create_supervault_section(vault_data: dict) -> html.Div:
         superform_api = SuperformAPI()
         
         # Parallelize vault data fetching with limited concurrency
-        with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-            # Process in smaller batches to avoid rate limits
-            batch_size = 3
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            batch_size = 2
             whitelisted_vault_data = []
             
             for i in range(0, len(whitelisted_vaults), batch_size):
@@ -496,7 +495,7 @@ def create_supervault_section(vault_data: dict) -> html.Div:
                         continue
                 
                 # Add a small delay between batches
-                time.sleep(0.05)
+                time.sleep(0.1)
                 
         api_time = time.time() - api_start
         print(f"Fetching whitelisted vault data: {api_time:.2f}s")

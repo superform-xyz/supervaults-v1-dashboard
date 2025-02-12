@@ -1,1 +1,1 @@
-web: gunicorn main:server --workers=1 --threads=4 --timeout=60 --preload --max-requests=1000
+web: gunicorn main:server --workers=1 --threads=4 --timeout=25 --preload --max-requests=1000
