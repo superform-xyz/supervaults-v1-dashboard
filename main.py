@@ -124,53 +124,62 @@ def create_supervault_header(vault_info: dict) -> html.Div:
     except Exception as e:
         return html.Div("Error loading supervault header", className='error-header')
 
-def create_vault_tile(vault_info, allocation_percentage):
+def create_vault_tile(vault_data, allocation_percentage):
     """Creates a tile for each whitelisted vault"""
-    protocol = vault_info.get('protocol', {})
-    stats = vault_info.get('vault_statistics', {})
-    
-    is_inactive = allocation_percentage == 0
-    tile_class = 'vault-tile inactive' if is_inactive else 'vault-tile'
-    
-    tile = html.Div([
-        html.Div([
-            html.Img(src=protocol.get('graphics', {}).get('icon', ''), 
-                    className='protocol-icon'),
-            html.Div([
-                html.H4(vault_info['friendly_name']),
-                html.P(f"{protocol.get('name', 'Unknown')} • {vault_info.get('yield_type', 'Unknown')}")
-            ], className='vault-header-text')
-        ], className='vault-header'),
+    try:
+        protocol = vault_data.get('protocol', {})
+        stats = vault_data.get('vault_statistics', {})
         
-        html.Div([
+        # Verify required fields
+        if not vault_data.get('friendly_name'):
+            return None
+            
+        is_inactive = allocation_percentage == 0
+        tile_class = 'vault-tile inactive' if is_inactive else 'vault-tile'
+        
+        tile = html.Div([
             html.Div([
-                html.P("Allocation", className='metric-label'),
-                html.H3(f"{allocation_percentage:.2f}%", className='metric-value'),
-                html.P("APY (week)", className='metric-label'),
-                html.H3(f"{stats.get('apy_week', 0):.2f}%", className='metric-value'),
-            ], className='metrics-column'),
+                html.Img(src=protocol.get('graphics', {}).get('icon', ''), 
+                        className='protocol-icon'),
+                html.Div([
+                    html.H4(vault_data['friendly_name']),
+                    html.P(f"{protocol.get('name', 'Unknown')} • {vault_data.get('yield_type', 'Unknown')}")
+                ], className='vault-header-text')
+            ], className='vault-header'),
             
             html.Div([
-                html.P("TVL", className='metric-label'),
-                html.H3(f"${stats.get('tvl_now', 0):,.2f}", className='metric-value'),
-                html.P("Price/Share", className='metric-label'),
-                html.H3(f"${stats.get('pps_usd', 1):,.4f}", className='metric-value'),
-            ], className='metrics-column'),
-        ], className='metrics-grid'),
+                html.Div([
+                    html.P("Allocation", className='metric-label'),
+                    html.H3(f"{allocation_percentage:.2f}%", className='metric-value'),
+                    html.P("APY (week)", className='metric-label'),
+                    html.H3(f"{stats.get('apy_week', 0):.2f}%", className='metric-value'),
+                ], className='metrics-column'),
+                
+                html.Div([
+                    html.P("TVL", className='metric-label'),
+                    html.H3(f"${stats.get('tvl_now', 0):,.2f}", className='metric-value'),
+                    html.P("Price/Share", className='metric-label'),
+                    html.H3(f"${stats.get('pps_usd', 1):,.4f}", className='metric-value'),
+                ], className='metrics-column'),
+            ], className='metrics-grid'),
+            
+            html.Div([
+                html.A("View on Superform →", 
+                      href=f"https://www.superform.xyz/vault/{vault_data.get('id', '')}",
+                      target="_blank",
+                      className='vault-link'),
+                html.A("View on Protocol Site →", 
+                      href=vault_data.get('external_url', '#'),
+                      target="_blank",
+                      className='vault-link')
+            ], className='vault-footer')
+        ], className=tile_class)
         
-        html.Div([
-            html.A("View on Superform →", 
-                  href=f"https://www.superform.xyz/vault/{vault_info.get('id', '')}",
-                  target="_blank",
-                  className='vault-link'),
-            html.A("View on Protocol Site →", 
-                  href=vault_info.get('external_url', '#'),
-                  target="_blank",
-                  className='vault-link')
-        ], className='vault-footer')
-    ], className=tile_class)
-    
-    return tile
+        return tile
+        
+    except Exception as e:
+        print(f"Error creating tile: {str(e)}")
+        return None
 
 # -----------------------------------------------------------------------------
 # Chart Components
@@ -236,7 +245,7 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
                     'weight': 'bold'
                 }
             },
-            height=500,
+            height=400,
             autosize=True,
             showlegend=True,
             legend=dict(
@@ -250,6 +259,8 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
                 itemsizing='constant'
             ),
             margin=dict(t=50, b=50, l=20, r=20),
+            paper_bgcolor='white',
+            plot_bgcolor='white',
             font=dict(family=CHART_FONT_FAMILY)
         )
 
@@ -341,7 +352,7 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
                     range=[0, None],
                     tickfont=dict(family=CHART_FONT_FAMILY)
                 ),
-                margin=dict(t=80, b=50, l=20, r=20),
+                margin=dict(t=50, b=50, l=50, r=20),
                 height=400,
                 autosize=True,
                 legend=dict(
@@ -355,6 +366,8 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
                 ),
                 bargap=0.15,
                 bargroupgap=0.1,
+                paper_bgcolor='white',
+                plot_bgcolor='white',
                 font=dict(family=CHART_FONT_FAMILY)
             )
 
@@ -428,8 +441,10 @@ def create_euler_charts(vault_info: List[Dict[str, Any]]) -> html.Div:
         barmode='group',
         yaxis_title='LTV %',
         xaxis_tickangle=45,  # Angle the address labels for better readability
-        height=500,  # Increased height to accommodate angled labels
-        margin=dict(b=100),  # Increased bottom margin for labels
+        height=400,  # Increased height to accommodate angled labels
+        margin=dict(t=50, b=100, l=50, r=20),
+        paper_bgcolor='white',
+        plot_bgcolor='white',
         font=dict(family=CHART_FONT_FAMILY)
     )
 
@@ -583,16 +598,21 @@ def create_supervault_section(vault_data: dict) -> html.Div:
 
 def load_vaults():
     try:
-        print("\n=== Loading SuperVaults ===")
+        start_time = time.time()
+        print("\n=== Performance Metrics ===")
         
-        # Get all supervaults first
+        # Get supervaults
         api_start = time.time()
         supervaults = SuperformAPI().get_supervaults()
+        print(f"API Init: {time.time() - api_start:.2f}s")
+        
         if not supervaults:
             raise ValueError("No supervaults data received from API")
-        print(f"Found {len(supervaults)} supervaults")
         
-        # Pre-initialize SuperVault instances
+        time.sleep(0.5)
+        
+        # Initialize vault instances
+        init_start = time.time()
         vault_instances = {}
         shared_api = SuperformAPI()
         
@@ -603,22 +623,25 @@ def load_vaults():
                     vault_info['chain']['id'], 
                     vault_info['contract_address']
                 )
-            except Exception as e:
-                print(f"Failed to initialize vault: {str(e)}")
+            except Exception:
+                continue
+        
+        print(f"Vault Init: {time.time() - init_start:.2f}s")
         
         if not vault_instances:
             raise ValueError("No vault instances could be initialized")
         
-        def process_vault_data(vault_data):
+        def process_vault_data(vault_data, delay_start=0):
             try:
+                process_start = time.time()
+                if delay_start > 0:
+                    time.sleep(delay_start)
+                    
                 vault_info = vault_data.get('vault')
                 if not vault_info:
                     return None
                 
                 vault_address = vault_info['contract_address']
-                chain_id = vault_info['chain']['id']
-                print(f"Processing: {vault_info.get('friendly_name', vault_address)}")
-                
                 supervault = vault_instances[vault_address]
                 
                 # Parallel fetch of whitelisted vaults and allocations
@@ -642,7 +665,7 @@ def load_vaults():
                     futures = [
                         executor.submit(
                             retry_with_backoff(retries=2, backoff_in_seconds=1)(
-                                shared_api.get_vault_data  # Use shared API instance
+                                shared_api.get_vault_data
                             ),
                             superform_id
                         )
@@ -657,10 +680,6 @@ def load_vaults():
                                 whitelisted_vault_data.append((vault_data, allocation))
                         except Exception as e:
                             print(f"Error fetching vault {superform_id}: {str(e)}")
-                
-                if not whitelisted_vault_data:
-                    print("  No whitelisted vault data available")
-                    return None
                 
                 # Get protocol-specific data
                 charts_data = None
@@ -693,18 +712,23 @@ def load_vaults():
                     print("No whitelisted vault data available")
                     return None
                 
+                print(f"Vault Processing: {time.time() - process_start:.2f}s")
                 return create_supervault_section_ui(vault_info, whitelisted_vault_data, charts_data)
                 
             except Exception as e:
-                print(f"Failed to process vault: {str(e)}")
+                print(f"Error: {str(e)}")
                 return None
         
         # Process vaults
-        print("\n=== Processing Vaults ===")
+        processing_start = time.time()
         sections = {}
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             future_to_vault = {
-                executor.submit(process_vault_data, vault_data): i
+                executor.submit(
+                    process_vault_data, 
+                    vault_data,
+                    delay_start=i * 1.0
+                ): i
                 for i, vault_data in enumerate(supervaults[:15])
                 if vault_data['vault']['contract_address'] in vault_instances
             }
@@ -715,13 +739,13 @@ def load_vaults():
                     section = future.result(timeout=60)
                     if section is not None:
                         sections[i] = section
-                        print(f"✓ Vault {i}")
-                    else:
-                        print(f"✗ Vault {i}")
                 except Exception as e:
-                    print(f"✗ Vault {i}: {str(e)}")
+                    print(f"Failed vault {i}: {str(e)}")
         
-        # Retry failed sections
+        print(f"Initial Processing: {time.time() - processing_start:.2f}s")
+        
+        # Retry failed sections if any
+        retry_start = time.time()
         failed_indices = [
             i for i, vault_data in enumerate(supervaults[:15])
             if i not in sections and vault_data['vault']['contract_address'] in vault_instances
@@ -739,44 +763,30 @@ def load_vaults():
                         section = process_vault_data(supervaults[i])
                         if section is not None:
                             sections[i] = section
-                            print(f"✓ Vault {i}")
                         else:
                             still_failed.append(i)
-                            print(f"✗ Vault {i}")
                         time.sleep(0.5)
                     except Exception as e:
                         still_failed.append(i)
-                        print(f"✗ Vault {i}: {str(e)}")
                 
                 failed_indices = still_failed
-        
-        # Summarize results
-        sorted_sections = [section for i, section in sorted(sections.items())]
-        print(f"\nLoaded {len(sorted_sections)}/{len(supervaults[:15])} vaults")
-        
-        if not sorted_sections:
-            return html.Div([
-                html.H2("No vaults available at the moment"),
-                html.P("Please try again later.")
-            ], className='error-message')
             
-        return sorted_sections
+            print(f"Retry Processing: {time.time() - retry_start:.2f}s")
+        
+        print(f"Total Time: {time.time() - start_time:.2f}s\n")
+        
+        sorted_sections = [section for i, section in sorted(sections.items())]
+        return sorted_sections if sorted_sections else html.Div("No vaults available", className='error-message')
         
     except Exception as e:
-        print(f"\n=== Error ===\n{str(e)}")
-        traceback.print_exc()
-        return html.Div([
-            html.H2("Error loading vaults"),
-            html.P("Please try again later."),
-            html.P(f"Error: {str(e)}", className='error-details') if app.debug else None
-        ], className='error-message')
+        print(f"Error: {str(e)}")
+        return html.Div("Error loading vaults", className='error-message')
 
 def create_supervault_section_ui(vault_info: dict, whitelisted_vault_data: list, charts_data: tuple) -> html.Div:
     """Creates the UI components for a supervault section"""
     try:
         # Verify vault_info has required fields
         if not vault_info.get('friendly_name'):
-            print(f"Missing friendly_name in vault_info: {vault_info}")
             return None
             
         # Sort by allocation
@@ -796,7 +806,6 @@ def create_supervault_section_ui(vault_info: dict, whitelisted_vault_data: list,
             section_children = [create_supervault_header(vault_info)]
         except Exception as e:
             print(f"Error creating header: {str(e)}")
-            print(f"Vault info used: {json.dumps(vault_info, indent=2)}")
             return None
         
         if charts:
@@ -806,11 +815,19 @@ def create_supervault_section_ui(vault_info: dict, whitelisted_vault_data: list,
             ])
         
         try:
-            vault_grid = html.Div([
-                create_vault_tile(vault_data, allocation)
-                for vault_data, allocation in whitelisted_vault_data
-            ], className='vault-grid')
+            # Create tiles with error handling
+            vault_tiles = []
+            for vault_data, allocation in whitelisted_vault_data:
+                tile = create_vault_tile(vault_data, allocation)
+                if tile is not None:
+                    vault_tiles.append(tile)
+                    
+            if not vault_tiles:
+                return None
+                
+            vault_grid = html.Div(vault_tiles, className='vault-grid')
             section_children.append(vault_grid)
+            
         except Exception as e:
             print(f"Error creating vault tiles: {str(e)}")
             return None
@@ -818,8 +835,7 @@ def create_supervault_section_ui(vault_info: dict, whitelisted_vault_data: list,
         return html.Div(section_children, className='supervault-section')
         
     except Exception as e:
-        print(f"Error creating UI for vault: {str(e)}")
-        print(f"Vault info: {json.dumps(vault_info, indent=2)}")
+        print(f"Error creating UI: {str(e)}")
         return None
 
 # -----------------------------------------------------------------------------
@@ -861,8 +877,12 @@ def serve_layout():
                 id='loading',
                 children=[html.Div(id='main-content')],
                 type='circle',
-                parent_className='loading-parent'
             ),
+            html.Div(
+                "Pulling live data...", 
+                id='loading-text',
+                className='loading-text'
+            )
         ], className='main-content'),
         create_footer()
     ], className='app-container')
