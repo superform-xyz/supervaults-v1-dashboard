@@ -854,7 +854,7 @@ def serve_layout():
     return html.Div([
         create_header(),
         html.Div(style={'height': '2rem'}),
-        html.Div(id='loading-container', children=[
+        html.Div(id='loading-wrapper', children=[
             dcc.Loading(
                 id='loading',
                 children=[html.Div(id='main-content')],
@@ -879,6 +879,15 @@ server = app.server
 )
 def update_content(_):
     return load_vaults()
+
+@app.callback(
+    Output('loading-text', 'style'),
+    Input('main-content', 'children')
+)
+def hide_loading_text(content):
+    if content is not None:
+        return {'display': 'none'}
+    return {'display': 'block'}
 
 if __name__ == '__main__':
     app.run(debug=True)
