@@ -590,11 +590,11 @@ def load_vaults():
         supervaults = SuperformAPI().get_supervaults()
         if not supervaults:
             raise ValueError("No supervaults data received from API")
-        print(f"Found {len(supervaults)} supervaults ({time.time() - api_start:.2f}s)")
+        print(f"Found {len(supervaults)} supervaults")
         
         # Pre-initialize SuperVault instances
         vault_instances = {}
-        shared_api = SuperformAPI()  # Create shared API instance
+        shared_api = SuperformAPI()
         
         for vault_data in supervaults[:15]:
             try:
@@ -617,7 +617,7 @@ def load_vaults():
                 
                 vault_address = vault_info['contract_address']
                 chain_id = vault_info['chain']['id']
-                print(f"\nProcessing: {vault_info.get('friendly_name', vault_address)} ({chain_id})")
+                print(f"Processing: {vault_info.get('friendly_name', vault_address)}")
                 
                 supervault = vault_instances[vault_address]
                 
@@ -696,11 +696,11 @@ def load_vaults():
                 return create_supervault_section_ui(vault_info, whitelisted_vault_data, charts_data)
                 
             except Exception as e:
-                print(f"  Failed to process vault: {str(e)}")
+                print(f"Failed to process vault: {str(e)}")
                 return None
         
         # Process vaults
-        print("\n=== Initial Processing ===")
+        print("\n=== Processing Vaults ===")
         sections = {}
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             future_to_vault = {
@@ -715,11 +715,11 @@ def load_vaults():
                     section = future.result(timeout=60)
                     if section is not None:
                         sections[i] = section
-                        print(f"✓ Vault {i} processed successfully")
+                        print(f"✓ Vault {i}")
                     else:
-                        print(f"✗ Vault {i} failed")
+                        print(f"✗ Vault {i}")
                 except Exception as e:
-                    print(f"✗ Vault {i} error: {str(e)}")
+                    print(f"✗ Vault {i}: {str(e)}")
         
         # Retry failed sections
         failed_indices = [
@@ -728,37 +728,31 @@ def load_vaults():
         ]
         
         if failed_indices:
-            print(f"\n=== Retrying {len(failed_indices)} Failed Vaults ===")
+            print(f"\n=== Retrying {len(failed_indices)} Vaults ===")
             for retry_attempt in range(2):
                 if not failed_indices:
                     break
-                    
-                print(f"\nAttempt {retry_attempt + 1}:")
-                still_failed = []
                 
+                still_failed = []
                 for i in failed_indices:
                     try:
                         section = process_vault_data(supervaults[i])
                         if section is not None:
                             sections[i] = section
-                            print(f"✓ Vault {i} recovered")
+                            print(f"✓ Vault {i}")
                         else:
                             still_failed.append(i)
-                            print(f"✗ Vault {i} still failed")
+                            print(f"✗ Vault {i}")
                         time.sleep(0.5)
                     except Exception as e:
                         still_failed.append(i)
-                        print(f"✗ Vault {i} error: {str(e)}")
+                        print(f"✗ Vault {i}: {str(e)}")
                 
                 failed_indices = still_failed
         
         # Summarize results
         sorted_sections = [section for i, section in sorted(sections.items())]
-        total_time = time.time() - api_start
-        
-        print(f"\n=== Summary ===")
-        print(f"Total time: {total_time:.2f}s")
-        print(f"Successfully loaded: {len(sorted_sections)}/{len(supervaults[:15])} vaults")
+        print(f"\nLoaded {len(sorted_sections)}/{len(supervaults[:15])} vaults")
         
         if not sorted_sections:
             return html.Div([
