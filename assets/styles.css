@@ -416,10 +416,21 @@
     min-height: 200px;
 }
 
-.loading-text {
+/* Position the loading circle */
+#loading {
     position: absolute;
-    top: 50%;
+    top: calc(50% - 5px);  /* Reduced from -10px to -5px */
     left: 50%;
     transform: translate(-50%, -50%);
+}
+
+.loading-text {
+    position: absolute;
+    top: calc(50% + 5px);  /* Reduced from +10px to +5px */
+    left: 50%;
+    transform: translate(-50%, 0);
+    color: #6b7280;
+    font-size: 0.875rem;
+    text-align: center;
     z-index: 1000;
 }
