@@ -420,14 +420,17 @@
     position: absolute;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, calc(20px + 50%));  /* Reduced from 50px to 20px */
+    transform: translate(-50%, calc(20px + 50%));
     color: #6b7280;
     font-size: 0.875rem;
     text-align: center;
     pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.2s;
 }
 
 /* Hide loading text when content is loaded */
 #main-content:not(:empty) ~ #loading-text {
-    display: none;
+    opacity: 0;
+    visibility: hidden;
 }

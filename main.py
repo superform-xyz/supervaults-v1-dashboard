@@ -604,6 +604,8 @@ def load_vaults():
         # Get supervaults
         api_start = time.time()
         supervaults = SuperformAPI().get_supervaults()
+        supervaults.sort(key=lambda x: 0 if x['vault']['chain']['id'] == 1 else 1)
+        
         print(f"API Init: {time.time() - api_start:.2f}s")
         
         if not supervaults:
