@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any, List
 import json
 import os
 from dotenv import load_dotenv
+import requests
 
 class Euler:
     # Lens addresses for different networks
@@ -23,6 +24,8 @@ class Euler:
         """
         # Load environment variables
         load_dotenv('.env.local')
+        
+        self.chain_id = chain_id
         
         # Validate chain_id
         if chain_id not in self.LENS_ADDRESSES:
@@ -52,6 +55,28 @@ class Euler:
             address=self.w3.to_checksum_address(self.lens_address),
             abi=self.lens_abi
         )
+        
+        # Load vault labels
+        self.vault_labels = self._load_vault_labels()
+
+    def _load_vault_labels(self) -> Dict[str, Dict[str, str]]:
+        """
+        Load vault labels from Euler's GitHub repository based on chain ID
+        
+        Returns:
+            Dictionary mapping vault addresses to their metadata
+        """
+        try:
+            url = f"https://raw.githubusercontent.com/euler-xyz/euler-labels/refs/heads/master/{self.chain_id}/vaults.json"
+            response = requests.get(url)
+            if response.status_code == 200:
+                return response.json()
+            else:
+                print(f"Warning: Could not load vault labels for chain {self.chain_id}")
+                return {}
+        except Exception as e:
+            print(f"Error loading vault labels: {e}")
+            return {}
 
     def get_vault(self, vault_address: str) -> Optional[Dict[str, Any]]:
         """
@@ -96,7 +121,8 @@ class Euler:
     def get_vault_ltv(self, vault_address: str) -> Optional[List[Dict[str, Any]]]:
         """
         Get LTV information for recognized collaterals of an Euler vault.
-        Uses a hardcoded mapping for token names to avoid contract calls.
+        Uses labels from Euler's GitHub repository for token names.
+        Skips collaterals with 0 borrowLTV.
         """
         try:
             ltv_info = self.lens_contract.functions.getRecognizedCollateralsLTVInfo(
@@ -105,9 +131,14 @@ class Euler:
             
             result = []
             for info in ltv_info:
+                # Skip if borrowLTV is 0
+                if info[1] == 0:
+                    continue
+                    
                 collateral_address = info[0]
-                # Use hardcoded mapping or fallback to address
-                token_name = self.TOKEN_NAMES.get(collateral_address, collateral_address)
+                # Try to get name from vault labels, fallback to address if not found
+                vault_data = self.vault_labels.get(collateral_address, {})
+                token_name = vault_data.get('name', collateral_address)
                 
                 result.append({
                     'collateral': collateral_address,

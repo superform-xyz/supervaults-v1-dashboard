@@ -425,7 +425,7 @@ def create_euler_charts(vault_info: List[Dict[str, Any]]) -> html.Div:
     
     fig_ltv.update_layout(
         title={
-            'text': 'Euler Collateral LTV Comparison',
+            'text': 'Euler Collateral Assets',
             'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',
