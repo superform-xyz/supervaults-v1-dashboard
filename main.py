@@ -405,29 +405,22 @@ def create_euler_charts(vault_info: List[Dict[str, Any]]) -> html.Div:
     # Create LTV comparison chart
     fig_ltv = go.Figure()
     
-    # Get shortened collateral addresses for labels
-    collaterals = [f"{info['collateral'][:6]}...{info['collateral'][-4:]}" for info in vault_info]
+    # Get collateral names for labels
+    collateral_names = [info['collateralName'] for info in vault_info]
     
     # Add traces for different LTV types
     fig_ltv.add_trace(go.Bar(
         name='Borrow LTV',
-        x=collaterals,
+        x=collateral_names,
         y=[info['borrowLTV'] for info in vault_info],
         marker_color='rgb(55, 83, 109)'
     ))
     
     fig_ltv.add_trace(go.Bar(
         name='Liquidation LTV',
-        x=collaterals,
+        x=collateral_names,
         y=[info['liquidationLTV'] for info in vault_info],
         marker_color='rgb(26, 118, 255)'
-    ))
-    
-    fig_ltv.add_trace(go.Bar(
-        name='Initial Liquidation LTV',
-        x=collaterals,
-        y=[info['initialLiquidationLTV'] for info in vault_info],
-        marker_color='rgb(200, 83, 109)'
     ))
     
     fig_ltv.update_layout(
@@ -440,8 +433,8 @@ def create_euler_charts(vault_info: List[Dict[str, Any]]) -> html.Div:
         },
         barmode='group',
         yaxis_title='LTV %',
-        xaxis_tickangle=45,  # Angle the address labels for better readability
-        height=400,  # Increased height to accommodate angled labels
+        xaxis_tickangle=45,  
+        height=400,  
         margin=dict(t=50, b=100, l=50, r=20),
         paper_bgcolor='white',
         plot_bgcolor='white',
