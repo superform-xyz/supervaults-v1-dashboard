@@ -234,7 +234,7 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
         # Set initial layout
         fig_pie.update_layout(
             title={
-                'text': "Collateral Asset Allocation",
+                'text': "Morpho Collateral Asset Allocation",
                 'y': 0.95,
                 'x': 0.5,
                 'xanchor': 'center',
@@ -327,7 +327,7 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
 
             fig_apy.update_layout(
                 title={
-                    'text': 'APY Breakdown by Asset',
+                    'text': 'Morpho APY Breakdown by Asset',
                     'y': 0.95,
                     'x': 0.5,
                     'xanchor': 'center',
@@ -425,7 +425,7 @@ def create_euler_charts(vault_info: List[Dict[str, Any]]) -> html.Div:
     
     fig_ltv.update_layout(
         title={
-            'text': 'Collateral LTV Comparison',
+            'text': 'Euler Collateral LTV Comparison',
             'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',
