@@ -429,12 +429,36 @@ def create_euler_charts(vault_info: List[Dict[str, Any]]) -> html.Div:
             'y': 0.95,
             'x': 0.5,
             'xanchor': 'center',
-            'yanchor': 'top'
+            'yanchor': 'top',
+            'font': {
+                'size': 16,
+                'family': CHART_FONT_FAMILY,
+                'weight': 'bold'
+            }
         },
         barmode='group',
-        yaxis_title='LTV %',
-        xaxis_tickangle=45,  
-        height=400,  
+        yaxis=dict(
+            title='LTV %',
+            zeroline=False,
+            showgrid=True,
+            gridcolor='rgba(0,0,0,0.1)',
+            tickfont=dict(family=CHART_FONT_FAMILY)
+        ),
+        xaxis=dict(
+            tickangle=45,
+            tickfont=dict(family=CHART_FONT_FAMILY)
+        ),
+        height=400,
+        autosize=True,
+        legend=dict(
+            orientation="v",
+            yanchor="top",
+            y=1,
+            xanchor="right",
+            x=1,
+            font=dict(size=12, family=CHART_FONT_FAMILY),
+            bgcolor='rgba(255, 255, 255, 0.1)'
+        ),
         margin=dict(t=50, b=100, l=50, r=20),
         paper_bgcolor='white',
         plot_bgcolor='white',
