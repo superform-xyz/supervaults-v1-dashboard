@@ -95,78 +95,43 @@ class Euler:
         Get LTV information for recognized collaterals of an Euler vault.
         Includes token names for each collateral.
         """
-        with open("abi/erc20.json") as file:
-            erc20_abi = json.load(file)
+        try:
+            # Load ERC20 ABI
+            with open("abi/erc20.json") as file:
+                erc20_abi = json.load(file)
 
-        ltv_info = self.lens_contract.functions.getRecognizedCollateralsLTVInfo(
-            self.w3.to_checksum_address(vault_address)
-        ).call()
+            ltv_info = self.lens_contract.functions.getRecognizedCollateralsLTVInfo(
+                self.w3.to_checksum_address(vault_address)
+            ).call()
             
-        result = []
-        for info in ltv_info:
-            # Create ERC20 contract instance for the collateral
-            collateral_address = info[0]
-            token_contract = self.w3.eth.contract(
-                address=self.w3.to_checksum_address(collateral_address),
-                abi=erc20_abi
-            )
+            result = []
+            for info in ltv_info:
+                # Create ERC20 contract instance for the collateral
+                collateral_address = info[0]
+                token_contract = self.w3.eth.contract(
+                    address=self.w3.to_checksum_address(collateral_address),
+                    abi=erc20_abi
+                )
                 
-            # Get token name
-            try:
-                token_name = token_contract.functions.name().call()
-            except Exception as e:
-                print(f"Error fetching token name for {collateral_address}: {e}")
-                token_name = collateral_address  # Fallback to address if name fetch fails
-            print(token_name)
-            result.append({
-                'collateral': collateral_address,
-                'collateralName': token_name,
-                'borrowLTV': info[1] / 100,  # Convert basis points to percentage
-                'liquidationLTV': info[2] / 100,
-                'initialLiquidationLTV': info[3] / 100,
-                'targetTimestamp': info[4],
-                'rampDuration': info[5]
-            })
-            print(result)
-            
-        return result
-        # try:
-        #     # Load ERC20 ABI
-        #     with open("abi/erc20.json") as file:
-        #         erc20_abi = json.load(file)
-
-        #     ltv_info = self.lens_contract.functions.getRecognizedCollateralsLTVInfo(
-        #         self.w3.to_checksum_address(vault_address)
-        #     ).call()
-            
-        #     result = []
-        #     for info in ltv_info:
-        #         # Create ERC20 contract instance for the collateral
-        #         collateral_address = info[0]
-        #         token_contract = self.w3.eth.contract(
-        #             address=self.w3.to_checksum_address(collateral_address),
-        #             abi=erc20_abi
-        #         )
+                # Get token name
+                try:
+                    token_name = token_contract.functions.name().call()
+                except Exception as e:
+                    print(f"Error fetching token name for {collateral_address}: {e}")
+                    token_name = collateral_address  # Fallback to address if name fetch fails
                 
-        #         # Get token name
-        #         try:
-        #             token_name = token_contract.functions.name().call()
-        #         except Exception as e:
-        #             print(f"Error fetching token name for {collateral_address}: {e}")
-        #             token_name = collateral_address  # Fallback to address if name fetch fails
-                
-        #         result.append({
-        #             'collateral': collateral_address,
-        #             'collateralName': token_name,
-        #             'borrowLTV': info[1] / 100,  # Convert basis points to percentage
-        #             'liquidationLTV': info[2] / 100,
-        #             'initialLiquidationLTV': info[3] / 100,
-        #             'targetTimestamp': info[4],
-        #             'rampDuration': info[5]
-        #         })
+                result.append({
+                    'collateral': collateral_address,
+                    'collateralName': token_name,
+                    'borrowLTV': info[1] / 100,  # Convert basis points to percentage
+                    'liquidationLTV': info[2] / 100,
+                    'initialLiquidationLTV': info[3] / 100,
+                    'targetTimestamp': info[4],
+                    'rampDuration': info[5]
+                })
             
-        #     return result
+            return result
             
-        # except Exception as e:
-        #     print(f"Error fetching vault LTV info: {e}")
-        #     return None
+        except Exception as e:
+            print(f"Error fetching vault LTV info: {e}")
+            return None
