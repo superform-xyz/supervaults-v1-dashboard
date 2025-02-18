@@ -538,37 +538,59 @@ def create_supervault_section(vault_data: dict) -> html.Div:
         whitelisted_vault_data.sort(key=lambda x: x[1], reverse=True)
         
         # Detect and create charts for protocols
-        charts = None
+        charts_data = []
         active_vaults = [
             (vault_data, alloc) for vault_data, alloc in whitelisted_vault_data
             if alloc > 0
         ]
         
-        for vault_data, _ in active_vaults:
+        # Track which protocols we've processed to avoid duplicates
+        processed_protocols = set()
+        
+        print(f"\nChecking protocols for vault {vault_address}:")
+        for vault_data, allocation in active_vaults:
             protocol_name = vault_data.get('protocol', {}).get('name', '').lower()
             vault_address = vault_data.get('contract_address')
             
-            if protocol_name == 'morpho' and vault_address:
-                morpho_data = Morpho().get_vault(vault_address)
-                if morpho_data:
-                    charts = create_morpho_charts(morpho_data)
-                    break
-            elif protocol_name == 'euler' and vault_address:
-                chain_id = vault_data.get('chain', {}).get('id')
-                if chain_id:
-                    euler_data = Euler(chain_id).get_vault(vault_address)
-                    if euler_data:
-                        charts = create_euler_charts(euler_data)
-                        break
+            print(f"Found protocol: {protocol_name} with allocation {allocation}%")
+            
+            # Skip if we've already processed this protocol
+            if protocol_name in processed_protocols:
+                print(f"Skipping {protocol_name} - already processed")
+                continue
+                
+            try:
+                if protocol_name == 'morpho' and vault_address:
+                    print(f"Processing Morpho vault: {vault_address}")
+                    morpho_data = Morpho().get_vault(vault_address)
+                    if morpho_data:
+                        morpho_charts = create_morpho_charts(morpho_data)
+                        if morpho_charts:
+                            charts_data.append(('morpho', morpho_charts))
+                            processed_protocols.add('morpho')
+                            print("Successfully added Morpho charts")
+                elif protocol_name == 'euler' and vault_address:
+                    print(f"Processing Euler vault: {vault_address}")
+                    chain_id = vault_data.get('chain', {}).get('id')
+                    if chain_id:
+                        euler_data = Euler(chain_id).get_vault_ltv(vault_address)
+                        if euler_data:
+                            euler_charts = create_euler_charts(euler_data)
+                            if euler_charts:
+                                charts_data.append(('euler', euler_charts))
+                                processed_protocols.add('euler')
+                                print("Successfully added Euler charts")
+            except Exception as e:
+                print(f"Error processing {protocol_name} vault {vault_address}: {str(e)}")
+                continue
         
         # Create the section with charts at the top
         section_children = [create_supervault_header(vault_info)]
         
-        if charts:
-            section_children.extend([
-                html.Hr(),
-                charts
-            ])
+        if charts_data:
+            section_children.append(html.Hr())
+            for protocol_type, chart in charts_data:
+                section_children.append(chart)
         
         section_children.append(
             html.Div([
@@ -581,7 +603,8 @@ def create_supervault_section(vault_data: dict) -> html.Div:
         print(f"Section complete: {total_time:.2f}s")
         return html.Div(section_children, className='supervault-section')
         
-    except Exception:
+    except Exception as e:
+        print(f"Error loading supervault section: {str(e)}")
         return html.Div("Error loading supervault section. Please try again later.", 
                        className='error-message')
 
@@ -633,29 +656,41 @@ def process_vault_data(vault_data, all_vaults_data, vault_instances):
 
         # Time protocol-specific API calls
         protocol_start = time.time()
-        charts_data = None
+        charts_data = []
         active_vaults = [(v, a) for v, a in whitelisted_vault_data if a > 0]
+        
+        # Track which protocols we've processed to avoid duplicates
+        processed_protocols = set()
         
         for vault_data, _ in active_vaults:
             protocol_name = vault_data.get('protocol', {}).get('name', '').lower()
             vault_address = vault_data.get('contract_address')
             
+            # Skip if we've already processed this protocol
+            if protocol_name in processed_protocols:
+                continue
+                
             try:
                 if protocol_name == 'morpho' and vault_address:
                     morpho_data = Morpho().get_vault(vault_address)
                     if morpho_data:
-                        charts_data = ('morpho', morpho_data)
-                        break
+                        morpho_charts = create_morpho_charts(morpho_data)
+                        if morpho_charts:
+                            charts_data.append(('morpho', morpho_charts))
+                            processed_protocols.add('morpho')
                 elif protocol_name == 'euler' and vault_address:
                     chain_id = vault_data.get('chain', {}).get('id')
                     if chain_id:
-                        euler_data = Euler(chain_id).get_vault(vault_address)
+                        euler_data = Euler(chain_id).get_vault_ltv(vault_address)
                         if euler_data:
-                            charts_data = ('euler', euler_data)
-                            break
+                            euler_charts = create_euler_charts(euler_data)
+                            if euler_charts:
+                                charts_data.append(('euler', euler_charts))
+                                processed_protocols.add('euler')
             except Exception as e:
                 print(f"Error fetching protocol data for {protocol_name}: {str(e)}")
                 continue
+                
         process_metrics['protocol_calls'] = time.time() - protocol_start
         
         if not whitelisted_vault_data:
@@ -757,7 +792,7 @@ def load_vaults():
         print(f"Error: {str(e)}")
         return html.Div("Error loading vaults", className='error-message')
 
-def create_supervault_section_ui(vault_info: dict, whitelisted_vault_data: list, charts_data: tuple) -> html.Div:
+def create_supervault_section_ui(vault_info: dict, whitelisted_vault_data: list, charts_data: list) -> html.Div:
     """Creates the UI components for a supervault section"""
     try:
         # Verify vault_info has required fields
@@ -767,15 +802,6 @@ def create_supervault_section_ui(vault_info: dict, whitelisted_vault_data: list,
         # Sort by allocation
         whitelisted_vault_data.sort(key=lambda x: x[1], reverse=True)
         
-        # Create charts if we have protocol data
-        charts = None
-        if charts_data:
-            protocol_type, protocol_data = charts_data
-            if protocol_type == 'morpho':
-                charts = create_morpho_charts(protocol_data)
-            elif protocol_type == 'euler':
-                charts = create_euler_charts(protocol_data)
-        
         # Create the section with charts at the top
         try:
             section_children = [create_supervault_header(vault_info)]
@@ -783,11 +809,11 @@ def create_supervault_section_ui(vault_info: dict, whitelisted_vault_data: list,
             print(f"Error creating header: {str(e)}")
             return None
         
-        if charts:
-            section_children.extend([
-                html.Hr(),
-                charts
-            ])
+        # Add charts if we have them
+        if charts_data:
+            section_children.append(html.Hr())
+            for protocol_type, chart in charts_data:
+                section_children.append(chart)
         
         try:
             # Create tiles with error handling

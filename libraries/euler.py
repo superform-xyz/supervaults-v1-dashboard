@@ -7,8 +7,11 @@ from dotenv import load_dotenv
 class Euler:
     # Lens addresses for different networks
     LENS_ADDRESSES = {
-        1: '0x5c5E9d8C89C9E2Cb8E6e9a2Ae5bD8e39B432f49b',  # Mainnet
+        1: '0xDb259A43E1E604202f9927447EB0B67F6D7Fc3E2',  # Mainnet
         8453: '0xc20B6e1d52ce377a450512958EEE8142063436CD'  # Base
+    }
+    
+    TOKEN_NAMES = {
     }
 
     def __init__(self, chain_id: int):
@@ -93,32 +96,18 @@ class Euler:
     def get_vault_ltv(self, vault_address: str) -> Optional[List[Dict[str, Any]]]:
         """
         Get LTV information for recognized collaterals of an Euler vault.
-        Includes token names for each collateral.
+        Uses a hardcoded mapping for token names to avoid contract calls.
         """
         try:
-            # Load ERC20 ABI
-            with open("abi/erc20.json") as file:
-                erc20_abi = json.load(file)
-
             ltv_info = self.lens_contract.functions.getRecognizedCollateralsLTVInfo(
                 self.w3.to_checksum_address(vault_address)
             ).call()
             
             result = []
             for info in ltv_info:
-                # Create ERC20 contract instance for the collateral
                 collateral_address = info[0]
-                token_contract = self.w3.eth.contract(
-                    address=self.w3.to_checksum_address(collateral_address),
-                    abi=erc20_abi
-                )
-                
-                # Get token name
-                try:
-                    token_name = token_contract.functions.name().call()
-                except Exception as e:
-                    print(f"Error fetching token name for {collateral_address}: {e}")
-                    token_name = collateral_address  # Fallback to address if name fetch fails
+                # Use hardcoded mapping or fallback to address
+                token_name = self.TOKEN_NAMES.get(collateral_address, collateral_address)
                 
                 result.append({
                     'collateral': collateral_address,
