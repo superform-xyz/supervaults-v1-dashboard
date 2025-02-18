@@ -185,8 +185,8 @@ def create_vault_tile(vault_data, allocation_percentage):
 # Chart Components
 # -----------------------------------------------------------------------------
 
-def create_morpho_charts(morpho_data: dict, euler_allocation: float = 0, euler_name: str = "") -> html.Div:
-    """Creates pie chart and APY graph for Morpho markets, including Euler allocation if present"""
+def create_morpho_charts(morpho_data: dict) -> html.Div:
+    """Creates pie chart and APY graph for Morpho markets"""
     allocations = morpho_data.get('state', {}).get('allocation', [])
     if not allocations:
         return None
@@ -195,27 +195,6 @@ def create_morpho_charts(morpho_data: dict, euler_allocation: float = 0, euler_n
     
     # Prepare data for pie chart
     markets_data = []
-    total_morpho_supply = 0
-    
-    # First calculate total Morpho supply for proper proportions
-    for alloc in allocations:
-        if not isinstance(alloc, dict):
-            continue
-        supply_assets = float(alloc.get('supplyAssets', 0))
-        total_morpho_supply += supply_assets
-    
-    # Now create market data including Euler allocation
-    if euler_allocation > 0:
-        # Add Euler vault as a market
-        markets_data.append({
-            'symbol': f"Euler {euler_name}",
-            'supply': euler_allocation,
-            'lltv': 0,  # Not applicable for Euler
-            'logo': '',  # Could add Euler logo here
-        })
-        
-    # Add Morpho markets with adjusted proportions
-    morpho_proportion = 1 - euler_allocation
     for alloc in allocations:
         if not isinstance(alloc, dict):
             continue
@@ -229,14 +208,12 @@ def create_morpho_charts(morpho_data: dict, euler_allocation: float = 0, euler_n
             continue
             
         supply_assets = float(alloc.get('supplyAssets', 0))
+        lltv = float('0.' + market.get('lltv', '0')[:15]) * 100
+        
         if supply_assets > 0:
-            # Adjust supply proportion to account for Euler allocation
-            adjusted_supply = (supply_assets / total_morpho_supply) * morpho_proportion
-            lltv = float('0.' + market.get('lltv', '0')[:15]) * 100
-            
             markets_data.append({
                 'symbol': collateral.get('symbol', 'Unknown'),
-                'supply': adjusted_supply,
+                'supply': supply_assets,
                 'lltv': lltv,
                 'logo': collateral.get('logoURI', ''),
             })
@@ -428,22 +405,29 @@ def create_euler_charts(vault_info: List[Dict[str, Any]]) -> html.Div:
     # Create LTV comparison chart
     fig_ltv = go.Figure()
     
-    # Get collateral names for labels
-    collateral_names = [info['collateralName'] for info in vault_info]
+    # Get shortened collateral addresses for labels
+    collaterals = [f"{info['collateral'][:6]}...{info['collateral'][-4:]}" for info in vault_info]
     
     # Add traces for different LTV types
     fig_ltv.add_trace(go.Bar(
         name='Borrow LTV',
-        x=collateral_names,
+        x=collaterals,
         y=[info['borrowLTV'] for info in vault_info],
         marker_color='rgb(55, 83, 109)'
     ))
     
     fig_ltv.add_trace(go.Bar(
         name='Liquidation LTV',
-        x=collateral_names,
+        x=collaterals,
         y=[info['liquidationLTV'] for info in vault_info],
         marker_color='rgb(26, 118, 255)'
+    ))
+    
+    fig_ltv.add_trace(go.Bar(
+        name='Initial Liquidation LTV',
+        x=collaterals,
+        y=[info['initialLiquidationLTV'] for info in vault_info],
+        marker_color='rgb(200, 83, 109)'
     ))
     
     fig_ltv.update_layout(
@@ -456,7 +440,7 @@ def create_euler_charts(vault_info: List[Dict[str, Any]]) -> html.Div:
         },
         barmode='group',
         yaxis_title='LTV %',
-        xaxis_tickangle=45,  # Angle the labels for better readability
+        xaxis_tickangle=45,  # Angle the address labels for better readability
         height=400,  # Increased height to accommodate angled labels
         margin=dict(t=50, b=100, l=50, r=20),
         paper_bgcolor='white',
@@ -615,13 +599,7 @@ def create_supervault_section(vault_data: dict) -> html.Div:
 def process_vault_data(vault_data, all_vaults_data, vault_instances):
     """Process a single vault's data without concurrency since we're just doing memory lookups"""
     try:
-        process_metrics = {
-            'blockchain_calls': 0,
-            'data_processing': 0,
-            'protocol_calls': 0,
-            'ui_creation': 0,
-            'total': 0
-        }
+        process_metrics = {}
         process_start = time.time()
 
         vault_info = vault_data.get('vault')
@@ -662,52 +640,30 @@ def process_vault_data(vault_data, all_vaults_data, vault_instances):
 
         # Time protocol-specific API calls
         protocol_start = time.time()
-        charts = None
+        charts_data = None
         active_vaults = [(v, a) for v, a in whitelisted_vault_data if a > 0]
         
-        # Track Morpho and Euler data
-        morpho_data = None
-        euler_data = None
-        euler_allocation = 0
-        euler_name = ""
-        
-        try:
-            for vault_data, allocation in active_vaults:
-                protocol_name = vault_data.get('protocol', {}).get('name', '').lower()
-                vault_address = vault_data.get('contract_address')
-                
+        for vault_data, _ in active_vaults:
+            protocol_name = vault_data.get('protocol', {}).get('name', '').lower()
+            vault_address = vault_data.get('contract_address')
+            
+            try:
                 if protocol_name == 'morpho' and vault_address:
                     morpho_data = Morpho().get_vault(vault_address)
+                    if morpho_data:
+                        charts_data = ('morpho', morpho_data)
+                        break
                 elif protocol_name == 'euler' and vault_address:
                     chain_id = vault_data.get('chain', {}).get('id')
                     if chain_id:
-                        euler_data = Euler(chain_id).get_vault_ltv(vault_address)
-                        euler_allocation = allocation
-                        euler_name = vault_data.get('friendly_name', '')
-        except Exception as e:
-            print(f"Error fetching protocol data: {str(e)}")
-            
+                        euler_data = Euler(chain_id).get_vault(vault_address)
+                        if euler_data:
+                            charts_data = ('euler', euler_data)
+                            break
+            except Exception as e:
+                print(f"Error fetching protocol data for {protocol_name}: {str(e)}")
+                continue
         process_metrics['protocol_calls'] = time.time() - protocol_start
-        
-        # Create combined charts
-        if morpho_data:
-            charts = create_morpho_charts(morpho_data, euler_allocation, euler_name)
-        
-        # Add Euler LTV chart if available
-        if euler_data:
-            euler_chart = create_euler_charts(euler_data)
-            if euler_chart:
-                if charts:
-                    # Add Euler chart to existing charts
-                    charts.children.append(
-                        html.Div([
-                            html.Hr(),
-                            euler_chart
-                        ])
-                    )
-                else:
-                    # Create new charts container with just Euler chart
-                    charts = euler_chart
         
         if not whitelisted_vault_data:
             print("No whitelisted vault data available")
@@ -715,19 +671,21 @@ def process_vault_data(vault_data, all_vaults_data, vault_instances):
 
         # Time UI creation
         ui_start = time.time()
-        section = create_supervault_section_ui(vault_info, whitelisted_vault_data, charts)
+        section = create_supervault_section_ui(vault_info, whitelisted_vault_data, charts_data)
         process_metrics['ui_creation'] = time.time() - ui_start
         
         process_metrics['total'] = time.time() - process_start
         print(f"\nVault {vault_address} processing times:")
-        for metric, value in process_metrics.items():
-            print(f"  {metric.replace('_', ' ').title()}: {value:.2f}s")
+        print(f"  Blockchain calls: {process_metrics['blockchain_calls']:.2f}s")
+        print(f"  Data processing: {process_metrics['data_processing']:.2f}s")
+        print(f"  Protocol calls: {process_metrics['protocol_calls']:.2f}s")
+        print(f"  UI creation: {process_metrics['ui_creation']:.2f}s")
+        print(f"  Total: {process_metrics['total']:.2f}s")
         
         return section
         
     except Exception as e:
         print(f"Error: {str(e)}")
-        traceback.print_exc()  # Add this to get more detailed error information
         return None
 
 def load_vaults():
@@ -806,7 +764,7 @@ def load_vaults():
         print(f"Error: {str(e)}")
         return html.Div("Error loading vaults", className='error-message')
 
-def create_supervault_section_ui(vault_info: dict, whitelisted_vault_data: list, charts: html.Div) -> html.Div:
+def create_supervault_section_ui(vault_info: dict, whitelisted_vault_data: list, charts_data: tuple) -> html.Div:
     """Creates the UI components for a supervault section"""
     try:
         # Verify vault_info has required fields
@@ -815,6 +773,15 @@ def create_supervault_section_ui(vault_info: dict, whitelisted_vault_data: list,
             
         # Sort by allocation
         whitelisted_vault_data.sort(key=lambda x: x[1], reverse=True)
+        
+        # Create charts if we have protocol data
+        charts = None
+        if charts_data:
+            protocol_type, protocol_data = charts_data
+            if protocol_type == 'morpho':
+                charts = create_morpho_charts(protocol_data)
+            elif protocol_type == 'euler':
+                charts = create_euler_charts(protocol_data)
         
         # Create the section with charts at the top
         try:
