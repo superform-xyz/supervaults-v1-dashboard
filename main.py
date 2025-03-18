@@ -2,12 +2,12 @@ import os
 import json
 from dash import Dash, html, dcc
 import pandas as pd
+from dash.dependencies import Input, Output, State
 from web3 import Web3
 from functools import wraps
 from libraries.superform import SuperVault, SuperformAPI, SuperformConfig
 from libraries.morpho import Morpho
 from libraries.euler import Euler
-from dash.dependencies import Input, Output, State
 from typing import List, Dict, Any
 import plotly.graph_objects as go
 import plotly.express as px
@@ -75,6 +75,7 @@ def create_header():
         
         html.Div([
             html.A("Documentation", href="https://docs.superform.xyz/supervaults/supervaults", className='nav-link'),
+            html.A("Integrations", href="/integrations", className='nav-link'),
             html.A("Go To App →", href="https://www.superform.xyz/explore/", 
                   className='connect-wallet-btn'),
         ], className='nav-links'),
@@ -474,6 +475,64 @@ def create_euler_charts(vault_info: List[Dict[str, Any]]) -> html.Div:
             ),
         ], className='chart-column'),
     ], className='charts-container')
+
+# -----------------------------------------------------------------------------
+# Page Components
+# -----------------------------------------------------------------------------
+
+def create_integrations_page():
+    """Creates the integrations page content"""
+    return html.Div([
+        html.H2("Superform Integrations", className="page-title"),
+        html.P("Integrate with Superform's powerful DeFi infrastructure", className="page-description"),
+        
+        html.Div([
+            html.Div([
+                html.Img(src="assets/superform.png", className="integration-icon"),
+                html.H3("API Integration", className="integration-title"),
+                html.P("Access Superform's data and functionality through our robust API.", className="integration-description"),
+                html.Ul([
+                    html.Li("Real-time vault data"),
+                    html.Li("APY information"),
+                    html.Li("TVL metrics"),
+                    html.Li("Performance analytics")
+                ], className="integration-features"),
+                html.A("View API Documentation →", href="https://docs.superform.xyz/", target="_blank", className="integration-link")
+            ], className="integration-card"),
+            
+            html.Div([
+                html.Img(src="assets/superform.png", className="integration-icon"),
+                html.H3("SDK Integration", className="integration-title"),
+                html.P("Build applications on top of Superform with our developer-friendly SDK.", className="integration-description"),
+                html.Ul([
+                    html.Li("Simplified vault interactions"),
+                    html.Li("Cross-chain functionality"),
+                    html.Li("Smart contract interactions"),
+                    html.Li("Wallet integration")
+                ], className="integration-features"),
+                html.A("Explore SDK →", href="https://github.com/superform-xyz", target="_blank", className="integration-link")
+            ], className="integration-card"),
+            
+            html.Div([
+                html.Img(src="assets/superform.png", className="integration-icon"),
+                html.H3("Direct Integration", className="integration-title"),
+                html.P("Integrate SuperVaults directly into your DeFi protocol or application.", className="integration-description"),
+                html.Ul([
+                    html.Li("Yield optimization"),
+                    html.Li("Risk management"),
+                    html.Li("Liquidity optimization"),
+                    html.Li("Custom vault strategies")
+                ], className="integration-features"),
+                html.A("Contact Team →", href="https://discord.com/invite/superform", target="_blank", className="integration-link")
+            ], className="integration-card")
+        ], className="integrations-grid"),
+        
+        html.Div([
+            html.H3("Ready to integrate?", className="cta-title"),
+            html.P("Get in touch with our team to discuss integration options.", className="cta-description"),
+            html.A("Contact Us", href="https://discord.com/invite/superform", target="_blank", className="cta-button")
+        ], className="integration-cta")
+    ], className="integrations-container")
 
 # -----------------------------------------------------------------------------
 # Main Section Components
@@ -895,9 +954,27 @@ app._favicon = 'superform.png'
 
 def serve_layout():
     return html.Div([
+        dcc.Location(id='url', refresh=False),
         create_header(),
         html.Div(style={'height': '2rem'}),
-        html.Div(id='loading-wrapper', children=[
+        html.Div(id='page-content'),
+        create_footer()
+    ], className='app-container')
+
+app.layout = serve_layout  
+
+server = app.server
+
+@app.callback(
+    Output('page-content', 'children'),
+    Input('url', 'pathname')
+)
+def display_page(pathname):
+    if pathname == '/integrations':
+        return create_integrations_page()
+    else:
+        # Main page content
+        return html.Div(id='loading-wrapper', children=[
             dcc.Loading(
                 id='loading',
                 children=[html.Div(id='main-content')],
@@ -908,13 +985,7 @@ def serve_layout():
                 id='loading-text',
                 className='loading-text'
             )
-        ], className='main-content'),
-        create_footer()
-    ], className='app-container')
-
-app.layout = serve_layout  
-
-server = app.server
+        ], className='main-content')
 
 @app.callback(
     Output('main-content', 'children'),
