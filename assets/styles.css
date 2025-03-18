@@ -479,6 +479,147 @@
     }
 }
 
+/* Integration cards grid - updated */
+.integration-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+    max-width: 100%;
+}
+
+.integration-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 1px 3px, rgba(0, 0, 0, 0.05) 0px 8px 24px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.integration-card:hover {
+    transform: translateY(-4px);
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 40px;
+    border-color: rgba(37, 99, 235, 0.3);
+}
+
+/* Integration section styles */
+.integration-section {
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+}
+
+.integration-subsection-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 24px 0 16px;
+    color: #111827;
+    border-left: 4px solid #2563eb;
+    padding-left: 12px;
+}
+
+/* PIGGY section specific styling */
+.piggy-section .integration-subsection-title {
+    border-left: 4px solid #FF69B4; /* Hot pink color for PIGGY section */
+}
+
+.piggy-section .integration-card .card-link {
+    color: #FF69B4; /* Hot pink links for PIGGY section */
+}
+
+.piggy-section .integration-card:hover {
+    border-color: rgba(255, 105, 180, 0.5); /* Hot pink border on hover for PIGGY section */
+}
+
+/* Card styles for integrations */
+.card-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    margin: 0 0 0.75rem 0;
+    color: #111827;
+}
+
+.card-description {
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    color: #4b5563;
+}
+
+.card-link {
+    text-decoration: none;
+    color: #2563eb;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-top: auto;
+    display: inline-block;
+}
+
+.expiry-text {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-style: italic;
+    margin-bottom: 0.75rem;
+    margin-top: 0;
+}
+
+/* CRED section styles */
+.cred-track-section {
+    margin-bottom: 32px;
+}
+
+.cred-link {
+    display: inline-block;
+    text-decoration: none;
+    color: #2563eb;
+    font-weight: 500;
+    margin: 8px 0;
+}
+
+.note-text {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-style: italic;
+    margin: 8px 0;
+    padding: 8px;
+    background: #f9fafb;
+    border-radius: 6px;
+}
+
+.section-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 24px 0 16px;
+    color: #111827;
+}
+
+.section-divider {
+    border: 0;
+    height: 1px;
+    background-color: #e5e7eb;
+    margin: 24px 0;
+}
+
+/* Responsive adjustments for mobile */
+@media (max-width: 768px) {
+    .integration-cards-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .integration-subsection-title {
+        font-size: 1.25rem;
+    }
+    
+    .card-title {
+        font-size: 1rem;
+    }
+}
+
 /* Charts Layout */
 .charts-container {
     display: grid;
