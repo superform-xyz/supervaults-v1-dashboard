@@ -492,6 +492,7 @@ def create_integrations_page():
         html.Div([
             html.Img(src="assets/pendle.png", className="partner-logo"),
             html.Img(src="assets/spectra.png", className="partner-logo"),
+            html.Img(src="assets/piggy.png", className="partner-logo"),
         ], className="partner-logos-container"),
         
         html.H3("SuperVaults", className="section-title"),
