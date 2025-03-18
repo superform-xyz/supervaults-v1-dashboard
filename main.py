@@ -492,6 +492,7 @@ def create_integrations_page():
         html.Div([
             html.Img(src="assets/pendle.png", className="partner-logo"),
             html.Img(src="assets/spectra.png", className="partner-logo"),
+            html.Img(src="assets/term.png", className="partner-logo"),
             html.Img(src="assets/piggy.png", className="partner-logo"),
         ], className="partner-logos-container"),
         
@@ -557,7 +558,17 @@ def create_integrations_page():
                     html.A("Spectra YT", href="https://app.spectra.finance/trade-yield/eth:0xd7e163a91d11cfa2b4059f1626ccd6e33b143cbc", target="_blank", className="card-link")
                 ], className="integration-card"),
                 
-                # Card 6: Lock SuperUSDC on Royco
+                # Card 6: Participate in Term Auction for PT-ysUSDC
+                html.Div([
+                    html.H5("Participate in Term Auction for PT-ysUSDC", className="card-title"),
+                    html.P([
+                        html.Strong("30x CRED"), 
+                        " + Term APY"
+                    ], className="card-description"),
+                    html.A("Term Auction", href="https://app.term.finance/auctions/0xb3728e7e1190f8673a72ec53a30fbb21448047d2/1", target="_blank", className="card-link")
+                ], className="integration-card"),
+                
+                # Card 7: Lock SuperUSDC on Royco
                 html.Div([
                     html.H5("Lock SuperUSDC on Royco for 3 months (Closed)", className="card-title"),
                     html.P([
