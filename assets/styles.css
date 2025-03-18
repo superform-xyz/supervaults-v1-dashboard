@@ -710,3 +710,23 @@
         text-align: left;
     }
 }
+
+/* Partner logos styling */
+.partner-logos-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    margin: 20px 0 30px 0;
+}
+
+.partner-logo {
+    height: 40px;
+    width: auto;
+    opacity: 0.9;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.partner-logo:hover {
+    opacity: 1;
+}

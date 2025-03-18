@@ -486,6 +486,12 @@ def create_integrations_page():
         html.H2("Earn more with Superform Exploration", className="page-title"),
         html.P("Discover the best ways to earn CRED.", className="page-description"),
         
+        # Pendle and Spectra logos
+        html.Div([
+            html.Img(src="assets/pendle.png", className="partner-logo"),
+            html.Img(src="assets/spectra.png", className="partner-logo"),
+        ], className="partner-logos-container"),
+        
         html.H3("SuperVaults", className="section-title"),
         
         # SuperUSDC on Ethereum Section
