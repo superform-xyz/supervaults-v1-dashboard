@@ -57,6 +57,20 @@
     color: #1a1a1a;
 }
 
+.brand-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    transition: opacity 0.2s ease;
+}
+
+.brand-link:hover {
+    opacity: 0.9;
+    text-decoration: none;
+    color: inherit;
+}
+
 .nav-links {
     display: flex;
     gap: 1rem;

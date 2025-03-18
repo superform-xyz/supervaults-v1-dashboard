@@ -69,8 +69,10 @@ def retry_with_backoff(retries=3, backoff_in_seconds=1, timeout=30):
 def create_header():
     return html.Div([
         html.Div([
-            html.Img(src='assets/superform.png', className='company-logo'),
-            html.H1("SuperVaults", className='brand-name'),
+            html.A([
+                html.Img(src='assets/superform.png', className='company-logo'),
+                html.H1("SuperVaults", className='brand-name'),
+            ], href="/", className='brand-link'),
         ], className='brand-container'),
         
         html.Div([
