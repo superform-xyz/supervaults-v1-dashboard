@@ -722,7 +722,7 @@ def create_integrations_page():
             html.P(
                 [
                     html.Strong("Note:"), 
-                    " CRED earned from Pendle, Spectra, and Royco does not stack with TVL or loyalty boosts and will be awarded at the end of the season."
+                    " CRED earned from Pendle, Spectra, Term, Royco, and Napier does not stack with TVL or loyalty boosts and will be awarded at the end of the season."
                 ], 
                 className="note-text"
             )
