@@ -493,6 +493,8 @@ def create_integrations_page():
             html.Img(src="assets/pendle.png", className="partner-logo"),
             html.Img(src="assets/spectra.png", className="partner-logo"),
             html.Img(src="assets/term.png", className="partner-logo"),
+            html.Img(src="assets/napier.svg", className="partner-logo"),
+            html.Img(src="assets/royco.svg", className="partner-logo"),
             html.Img(src="assets/piggy.png", className="partner-logo"),
         ], className="partner-logos-container"),
         
@@ -576,6 +578,27 @@ def create_integrations_page():
                     ], className="card-description"),
                     html.P("End Date: April 20th", className="expiry-text"),
                     html.A("Royco Lock", href="https://app.royco.org/market/1/0/0xf98c40038e95042341a5e0f0d9fa4cc7a32a839f8645ebb91dd770f8578e2280", target="_blank", className="card-link")
+                ], className="integration-card"),
+                
+                # Card 8: Provide SuperUSDC Liquidity on Napier
+                html.Div([
+                    html.H5("Provide SuperUSDC Liquidity on Napier", className="card-title"),
+                    html.P([
+                        html.Strong("50x CRED"), 
+                        " + Pool APY"
+                    ], className="card-description"),
+                    html.P("Expiry: April 20th", className="expiry-text"),
+                    html.A("Napier Liquidity", href="https://app.napier.finance/user/trade/1/0xddfb1bcfe41d8bd90fa57ee2cfc8ec7c94981ced/pt", target="_blank", className="card-link")
+                ], className="integration-card"),
+                
+                # Card 9: Hold SuperUSDC Napier YT
+                html.Div([
+                    html.H5("Hold SuperUSDC Napier YT", className="card-title"),
+                    html.P([
+                        html.Strong("50x CRED")
+                    ], className="card-description"),
+                    html.P("Expiry: April 20th", className="expiry-text"),
+                    html.A("Napier YT", href="https://app.napier.finance/user/trade/1/0xddfb1bcfe41d8bd90fa57ee2cfc8ec7c94981ced/yt", target="_blank", className="card-link")
                 ], className="integration-card"),
             ], className="integration-cards-grid"),
         ], className="integration-section"),
