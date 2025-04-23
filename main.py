@@ -76,7 +76,6 @@ def create_header():
         ], className='brand-container'),
         
         html.Div([
-            html.A("Integrations", href="/integrations", className='nav-link'),
             html.A("Documentation", href="https://docs.superform.xyz/supervaults/supervaults", className='nav-link'),
             html.A("Go To App →", href="https://www.superform.xyz/explore/", 
                   className='connect-wallet-btn'),
@@ -474,257 +473,6 @@ def create_euler_charts(vault_info: List[Dict[str, Any]]) -> html.Div:
         ], className='chart-column'),
     ], className='charts-container')
 
-# -----------------------------------------------------------------------------
-# Page Components
-# -----------------------------------------------------------------------------
-
-def create_integrations_page():
-    """Creates the integrations page content with three main sections for earning CRED"""
-    return html.Div([
-        html.H2("Earn more with Superform Exploration", className="page-title"),
-        html.P("Discover the best ways to earn CRED.", className="page-description"),
-        
-        # Pendle and Spectra logos
-        html.Div([
-            html.Img(src="assets/pendle.png", className="partner-logo"),
-            html.Img(src="assets/spectra.png", className="partner-logo"),
-            html.Img(src="assets/term.png", className="partner-logo"),
-            html.Img(src="assets/napier.svg", className="partner-logo"),
-            html.Img(src="assets/royco.svg", className="partner-logo"),
-            html.Img(src="assets/piggy.png", className="partner-logo"),
-        ], className="partner-logos-container"),
-        
-        html.H3("SuperVaults", className="section-title"),
-        
-        # SuperUSDC on Ethereum Section
-        html.Div([
-            html.H4("SuperUSDC on Ethereum", className="integration-subsection-title"),
-            
-            html.Div([
-                # Card 1: Deposit into SuperUSDC
-                html.Div([
-                    html.H5("Deposit into SuperUSDC on Superform", className="card-title"),
-                    html.P([
-                        html.Strong("20x CRED"), 
-                        " + up to ", 
-                        html.Strong("10x CRED TVL Boost"), 
-                        " & ", 
-                        html.Strong("5x CRED Loyalty Boost")
-                    ], className="card-description"),
-                    html.A("SuperUSDC Vault", href="https://www.superform.xyz/vault/vL7k-5ZgYCoFgi6kz2jIJ/", target="_blank", className="card-link")
-                ], className="integration-card"),
-                
-                # Card 2: Provide SuperUSDC Liquidity on Pendle
-                html.Div([
-                    html.H5("Provide SuperUSDC Liquidity on Pendle", className="card-title"),
-                    html.P([
-                        html.Strong("50x CRED"), 
-                        " + Pool APY"
-                    ], className="card-description"),
-                    html.P("Expiry: April 17th", className="expiry-text"),
-                    html.A("Pendle Liquidity", href="https://app.pendle.finance/trade/pools/0x1bd1ae9d7a377e63cd0c584a2c42b8c614937e81/zap/in?chain=ethereum", target="_blank", className="card-link")
-                ], className="integration-card"),
-                
-                # Card 3: Hold SuperUSDC Pendle YT
-                html.Div([
-                    html.H5("Hold SuperUSDC Pendle YT", className="card-title"),
-                    html.P([
-                        html.Strong("50x CRED")
-                    ], className="card-description"),
-                    html.P("Expiry: April 17th", className="expiry-text"),
-                    html.A("Pendle YT", href="https://app.pendle.finance/trade/markets/0x1bd1ae9d7a377e63cd0c584a2c42b8c614937e81/swap?view=yt&chain=ethereum", target="_blank", className="card-link")
-                ], className="integration-card"),
-                
-                # Card 4: Provide SuperUSDC Liquidity on Spectra
-                html.Div([
-                    html.H5("Provide SuperUSDC Liquidity on Spectra", className="card-title"),
-                    html.P([
-                        html.Strong("50x CRED"), 
-                        " + Pool APY"
-                    ], className="card-description"),
-                    html.P("Expiry: April 20th", className="expiry-text"),
-                    html.A("Spectra Liquidity", href="https://app.spectra.finance/pools/eth:0xd7e163a91d11cfa2b4059f1626ccd6e33b143cbc", target="_blank", className="card-link")
-                ], className="integration-card"),
-                
-                # Card 5: Hold SuperUSDC YT on Spectra
-                html.Div([
-                    html.H5("Hold SuperUSDC YT on Spectra", className="card-title"),
-                    html.P([
-                        html.Strong("50x CRED")
-                    ], className="card-description"),
-                    html.P("Expiry: April 20th", className="expiry-text"),
-                    html.A("Spectra YT", href="https://app.spectra.finance/trade-yield/eth:0xd7e163a91d11cfa2b4059f1626ccd6e33b143cbc", target="_blank", className="card-link")
-                ], className="integration-card"),
-                
-                # Card 6: Participate in Term Auction for PT-ysUSDC
-                html.Div([
-                    html.H5("Participate in Term Auction for PT-ysUSDC", className="card-title"),
-                    html.P([
-                        html.Strong("30x CRED"), 
-                        " + Term APY"
-                    ], className="card-description"),
-                    html.A("Term Auction", href="https://app.term.finance/auctions/0xb3728e7e1190f8673a72ec53a30fbb21448047d2/1", target="_blank", className="card-link")
-                ], className="integration-card"),
-                
-                # Card 7: Lock SuperUSDC on Royco
-                html.Div([
-                    html.H5("Lock SuperUSDC on Royco for 3 months (Closed)", className="card-title"),
-                    html.P([
-                        html.Strong("30x CRED")
-                    ], className="card-description"),
-                    html.P("End Date: April 20th", className="expiry-text"),
-                    html.A("Royco Lock", href="https://app.royco.org/market/1/0/0xf98c40038e95042341a5e0f0d9fa4cc7a32a839f8645ebb91dd770f8578e2280", target="_blank", className="card-link")
-                ], className="integration-card"),
-                
-                # Card 8: Provide SuperUSDC Liquidity on Napier
-                html.Div([
-                    html.H5("Provide SuperUSDC Liquidity on Napier", className="card-title"),
-                    html.P([
-                        html.Strong("50x CRED"), 
-                        " + Pool APY"
-                    ], className="card-description"),
-                    html.P("Expiry: April 20th", className="expiry-text"),
-                    html.A("Napier Liquidity", href="https://app.napier.finance/user/trade/1/0xddfb1bcfe41d8bd90fa57ee2cfc8ec7c94981ced/pt", target="_blank", className="card-link")
-                ], className="integration-card"),
-                
-                # Card 9: Hold SuperUSDC Napier YT
-                html.Div([
-                    html.H5("Hold SuperUSDC Napier YT", className="card-title"),
-                    html.P([
-                        html.Strong("50x CRED")
-                    ], className="card-description"),
-                    html.P("Expiry: April 20th", className="expiry-text"),
-                    html.A("Napier YT", href="https://app.napier.finance/user/trade/1/0xddfb1bcfe41d8bd90fa57ee2cfc8ec7c94981ced/yt", target="_blank", className="card-link")
-                ], className="integration-card"),
-            ], className="integration-cards-grid"),
-        ], className="integration-section"),
-        
-        # SuperUSDC on Base Section
-        html.Div([
-            html.H4("SuperUSDC on Base", className="integration-subsection-title"),
-            
-            html.Div([
-                # Card 1: Deposit into SuperUSDC on Base
-                html.Div([
-                    html.H5("Deposit into SuperUSDC on Superform", className="card-title"),
-                    html.P([
-                        html.Strong("20x CRED"), 
-                        " + up to ", 
-                        html.Strong("10x CRED TVL Boost"), 
-                        " & ", 
-                        html.Strong("5x CRED Loyalty Boost")
-                    ], className="card-description"),
-                    html.A("SuperUSDC Vault", href="https://www.superform.xyz/vault/zLVQbgScIbXJuSz-NNsK-/", target="_blank", className="card-link")
-                ], className="integration-card"),
-                
-                # Card 2: Lock SuperUSDC on Royco
-                html.Div([
-                    html.H5("Lock SuperUSDC on Royco for 10 weeks", className="card-title"),
-                    html.P([
-                        html.Strong("30x CRED")
-                    ], className="card-description"),
-                    html.P("End Date: April 20th", className="expiry-text"),
-                    html.A("Royco Lock", href="https://app.royco.org/market/8453/0/0x18493e771a4fd1cc17f01ec9f12cc3058bd4e30fda4affdd3e2c11ec6a557c8c", target="_blank", className="card-link")
-                ], className="integration-card"),
-            ], className="integration-cards-grid"),
-        ], className="integration-section"),
-        
-        # SuperETH on Ethereum Section
-        html.Div([
-            html.H4("SuperETH on Ethereum", className="integration-subsection-title"),
-            
-            html.Div([
-                # Card 1: Deposit into SuperETH
-                html.Div([
-                    html.H5("Deposit into SuperETH on Superform", className="card-title"),
-                    html.P([
-                        html.Strong("20x CRED"), 
-                        " + up to ", 
-                        html.Strong("10x CRED TVL Boost"), 
-                        " & ", 
-                        html.Strong("5x CRED Loyalty Boost")
-                    ], className="card-description"),
-                    html.A("SuperETH Vault", href="https://www.superform.xyz/vault/8x0dWMdugEMCvyTC1mfdx/", target="_blank", className="card-link")
-                ], className="integration-card"),
-                
-                # Card 2: Provide SuperETH Liquidity on Spectra
-                html.Div([
-                    html.H5("Provide SuperETH Liquidity on Spectra", className="card-title"),
-                    html.P([
-                        html.Strong("50x CRED"), 
-                        " + Pool APY"
-                    ], className="card-description"),
-                    html.P("Expiry: April 20th", className="expiry-text"),
-                    html.A("Spectra Liquidity", href="https://app.spectra.finance/pools/eth:0x1825b0ffb79093be293b9899f33ae7f665d872ce", target="_blank", className="card-link")
-                ], className="integration-card"),
-                
-                # Card 3: Hold SuperETH YT on Spectra
-                html.Div([
-                    html.H5("Hold SuperETH YT on Spectra", className="card-title"),
-                    html.P([
-                        html.Strong("50x CRED")
-                    ], className="card-description"),
-                    html.P("Expiry: April 20th", className="expiry-text"),
-                    html.A("Spectra YT", href="https://app.spectra.finance/trade-yield/eth:0x1825b0ffb79093be293b9899f33ae7f665d872ce", target="_blank", className="card-link")
-                ], className="integration-card"),
-            ], className="integration-cards-grid"),
-        ], className="integration-section"),
-        
-        html.Hr(className="section-divider"),
-        
-        # PIGGY Section
-        html.Div([
-            html.H4("$PIGGY", className="integration-subsection-title"),
-            
-            html.Div([
-                # Card 1: Deposit PIGGY into Animal Farm
-                html.Div([
-                    html.H5("Deposit $PIGGY into Animal Farm on Superform", className="card-title"),
-                    html.P([
-                        html.Strong("10x CRED"), 
-                        " + up to ", 
-                        html.Strong("10x CRED TVL Boost"), 
-                        " & ", 
-                        html.Strong("5x CRED Loyalty Boost")
-                    ], className="card-description"),
-                    html.A("Animal Farm", href="https://www.superform.xyz/vault/jwkQfbPyh33AYFE3iF5II/", target="_blank", className="card-link")
-                ], className="integration-card"),
-                
-                # Card 2: Deposit PIGGY + ETH to Slop Bucket
-                html.Div([
-                    html.H5("Deposit $PIGGY + $ETH to Slop Bucket", className="card-title"),
-                    html.P([
-                        html.Strong("15x CRED"), 
-                        " + Pool APY"
-                    ], className="card-description"),
-                    html.A("Slop Bucket", href="https://www.superform.xyz/piggy/", target="_blank", className="card-link")
-                ], className="integration-card"),
-                
-                # Card 3: Lock PIGGY on Royco
-                html.Div([
-                    html.H5("Lock $PIGGY on Royco for 10 weeks (Closed)", className="card-title"),
-                    html.P([
-                        html.Strong("15x CRED"), 
-                        html.I(" (at $3M MC)")
-                    ], className="card-description"),
-                    html.P("Expiry: April 20th", className="expiry-text"),
-                    html.A("Royco Lock", href="https://app.royco.org/market/8453/0/0x1b467d65fde4ec8988e8df1706d0f9e028db8d41e14d10fbbd7b194e5744ac59", target="_blank", className="card-link")
-                ], className="integration-card"),
-            ], className="integration-cards-grid"),
-        ], className="integration-section piggy-section"),
-        
-        # Simple track your CRED link with note
-        html.Div([
-            html.P(
-                [
-                    html.Strong("Note:"), 
-                    " CRED earned from Pendle, Spectra, Term, Royco, and Napier does not stack with TVL or loyalty boosts and will be awarded at the end of the season."
-                ], 
-                className="note-text"
-            )
-        ], className="cred-track-section"),
-        
-    ], className="integrations-container")
 
 # -----------------------------------------------------------------------------
 # Main Section Components
@@ -1162,22 +910,18 @@ server = app.server
     Input('url', 'pathname')
 )
 def display_page(pathname):
-    if pathname == '/integrations':
-        return create_integrations_page()
-    else:
-        # Main page content
-        return html.Div(id='loading-wrapper', children=[
-            dcc.Loading(
-                id='loading',
-                children=[html.Div(id='main-content')],
-                type='circle',
-            ),
-            html.Div(
-                "Pulling live data...", 
-                id='loading-text',
-                className='loading-text'
-            )
-        ], className='main-content')
+    return html.Div(id='loading-wrapper', children=[
+        dcc.Loading(
+            id='loading',
+            children=[html.Div(id='main-content')],
+            type='circle',
+        ),
+        html.Div(
+            "Pulling live data...", 
+            id='loading-text',
+            className='loading-text'
+        )
+    ], className='main-content')
 
 @app.callback(
     Output('main-content', 'children'),
