@@ -153,16 +153,12 @@ def create_vault_tile(vault_data, allocation_percentage):
             html.Div([
                 html.Div([
                     html.P("Allocation", className='metric-label'),
-                    html.H3(f"{allocation_percentage:.2f}%", className='metric-value'),
-                    html.P("Base APY (week)", className='metric-label'),
-                    html.H3(f"{stats.get('apy_week', 0):.2f}%", className='metric-value'),
+                    html.H3(f"{allocation_percentage:.2f}%", className='metric-value')
                 ], className='metrics-column'),
                 
                 html.Div([
                     html.P("TVL", className='metric-label'),
-                    html.H3(f"${stats.get('tvl_now', 0):,.2f}", className='metric-value'),
-                    html.P("Price/Share", className='metric-label'),
-                    html.H3(f"${stats.get('pps_usd', 1):,.4f}", className='metric-value'),
+                    html.H3(f"${stats.get('tvl_now', 0):,.2f}", className='metric-value')
                 ], className='metrics-column'),
             ], className='metrics-grid'),
             
