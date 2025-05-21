@@ -29,15 +29,19 @@ class SuperformConfig:
         self._configure_chain()
 
     def _configure_chain(self):
+        # Use environment variables for Base and Ethereum
+        base_rpc = os.getenv('BASE_RPC_URL', 'https://mainnet.base.org')
+        ethereum_rpc = os.getenv('ETHEREUM_RPC_URL', 'https://eth.llamarpc.com')
+        
         # Simplified chain configs with just name and base URL
         chain_configs = {
             42161: ('Arbitrum', 'https://arb1.arbitrum.io/rpc'),
             43114: ('Avalanche', 'https://api.avax.network/ext/bc/C/rpc'),
             56: ('BSC', 'https://bsc-dataseed.binance.org'),
-            1: ('Ethereum', 'https://eth.llamarpc.com'),
+            1: ('Ethereum', ethereum_rpc),
             10: ('Optimism', 'https://mainnet.optimism.io'),
             137: ('Polygon', 'https://polygon-rpc.com'),
-            8453: ('Base', 'https://mainnet.base.org'),
+            8453: ('Base', base_rpc),
             250: ('Fantom', 'https://rpc.ftm.tools'),
             81457: ('Blast', 'https://blast.blockpi.network/v1/rpc/public'),
             59144: ('Linea', 'https://rpc.linea.build')
