@@ -183,50 +183,79 @@ def create_vault_tile(vault_data, allocation_percentage):
 # Chart Components
 # -----------------------------------------------------------------------------
 
-def create_morpho_charts(morpho_data: dict) -> html.Div:
-    """Creates pie chart and APY graph for Morpho markets"""
-    allocations = morpho_data.get('state', {}).get('allocation', [])
-    if not allocations:
+def create_morpho_charts(morpho_vaults: list) -> html.Div:
+    """Creates pie chart and APY graph for Morpho markets
+    
+    Args:
+        morpho_vaults: List of tuples (morpho_data, vault_allocation_percentage)
+    """
+    if not morpho_vaults:
         return None
 
     charts_div = []
     
-    # Prepare data for pie chart
-    markets_data = []
-    for alloc in allocations:
-        if not isinstance(alloc, dict):
+    # Prepare data for pie chart - aggregate across all vaults
+    markets_data = {}
+    all_apy_data = {}
+    
+    # Process each Morpho vault
+    for morpho_data, vault_allocation_pct in morpho_vaults:
+        allocations = morpho_data.get('state', {}).get('allocation', [])
+        if not allocations:
             continue
             
-        market = alloc.get('market', {})
-        if not isinstance(market, dict):
-            continue
+        for alloc in allocations:
+            if not isinstance(alloc, dict):
+                continue
+                
+            market = alloc.get('market', {})
+            if not isinstance(market, dict):
+                continue
+                
+            collateral = market.get('collateralAsset')
+            if not isinstance(collateral, dict):
+                continue
+                
+            supply_assets_raw = alloc.get('supplyAssets', 0)
+            if supply_assets_raw is None:
+                supply_assets_raw = 0
+            supply_assets = float(supply_assets_raw)
             
-        collateral = market.get('collateralAsset')
-        if not isinstance(collateral, dict):
-            continue
+            lltv_raw = market.get('lltv', '0')
+            if lltv_raw is None:
+                lltv_raw = '0'
+            lltv = float('0.' + str(lltv_raw)[:15]) * 100
             
-        supply_assets = float(alloc.get('supplyAssets', 0))
-        lltv = float('0.' + market.get('lltv', '0')[:15]) * 100
-        
-        if supply_assets > 0:
-            markets_data.append({
-                'symbol': collateral.get('symbol', 'Unknown'),
-                'supply': supply_assets,
-                'lltv': lltv,
-                'logo': collateral.get('logoURI', ''),
-            })
+            if supply_assets > 0:
+                symbol = collateral.get('symbol', 'Unknown')
+                # Scale supply by vault allocation percentage
+                scaled_supply = supply_assets * (vault_allocation_pct / 100)
+                
+                if symbol in markets_data:
+                    # Aggregate supplies for the same asset
+                    markets_data[symbol]['supply'] += scaled_supply
+                else:
+                    markets_data[symbol] = {
+                        'symbol': symbol,
+                        'supply': scaled_supply,
+                        'lltv': lltv,
+                        'logo': collateral.get('logoURI', ''),
+                    }
 
-    if markets_data:
+    # Convert markets_data dict to list
+    markets_list = list(markets_data.values())
+    
+    if markets_list:
         # Create the pie chart with responsive layout
         fig_pie = go.Figure(data=[go.Pie(
-            labels=[m['symbol'] for m in markets_data],
-            values=[m['supply'] for m in markets_data],
+            labels=[m['symbol'] for m in markets_list],
+            values=[m['supply'] for m in markets_list],
             hole=0.4,
             textinfo='percent',  # Only show percentage in the pie
             hovertemplate="<b>%{label}</b><br>" +
                          "Allocation: %{percent}<br>" +
                          "LLTV: %{customdata}%<extra></extra>",
-            customdata=[f"{m['lltv']:.2f}" for m in markets_data],
+            customdata=[f"{m['lltv']:.2f}" for m in markets_list],
         )])
 
         # Set initial layout
@@ -263,41 +292,66 @@ def create_morpho_charts(morpho_data: dict) -> html.Div:
         )
 
         # Get symbols with non-zero supply for APY graph
-        active_symbols = {m['symbol'] for m in markets_data}
+        active_symbols = {m['symbol'] for m in markets_list}
 
-        # Prepare data for APY graph (only for active symbols)
-        apy_data = []
-        for alloc in allocations:
-            if not isinstance(alloc, dict):
+        # Prepare data for APY graph - collect from all vaults
+        for morpho_data, vault_allocation_pct in morpho_vaults:
+            allocations = morpho_data.get('state', {}).get('allocation', [])
+            if not allocations:
                 continue
                 
-            market = alloc.get('market', {})
-            if not isinstance(market, dict):
-                continue
+            for alloc in allocations:
+                if not isinstance(alloc, dict):
+                    continue
+                    
+                market = alloc.get('market', {})
+                if not isinstance(market, dict):
+                    continue
+                    
+                collateral = market.get('collateralAsset')
+                if not isinstance(collateral, dict):
+                    continue
+                    
+                symbol = collateral.get('symbol', 'Unknown')
+                if symbol not in active_symbols:
+                    continue
+                    
+                state = market.get('state', {})
+                if not isinstance(state, dict):
+                    continue
                 
-            collateral = market.get('collateralAsset')
-            if not isinstance(collateral, dict):
-                continue
+                supply_apy_raw = state.get('supplyApy', 0)
+                if supply_apy_raw is None:
+                    supply_apy_raw = 0
+                supply_apy = float(supply_apy_raw) * 100
                 
-            symbol = collateral.get('symbol', 'Unknown')
-            if symbol not in active_symbols:
-                continue
+                rewards = state.get('rewards', [])
+                if rewards is None:
+                    rewards = []
+                reward_apr = 0
+                for reward in rewards:
+                    if reward is None:
+                        continue
+                    reward_apr_raw = reward.get('supplyApr', 0)
+                    if reward_apr_raw is not None and reward_apr_raw != 0:
+                        try:
+                            reward_apr += float(reward_apr_raw)
+                        except (ValueError, TypeError):
+                            continue
+                reward_apr *= 100
+                total_apy = supply_apy + reward_apr
                 
-            state = market.get('state', {})
-            if not isinstance(state, dict):
-                continue
-            
-            supply_apy = float(state.get('supplyApy', 0)) * 100
-            rewards = state.get('rewards', [])
-            reward_apr = sum(float(reward.get('supplyApr', 0)) for reward in rewards) * 100
-            total_apy = supply_apy + reward_apr
-            
-            apy_data.append({
-                'symbol': symbol,
-                'Total APY': total_apy,
-                'Base APY': supply_apy,
-                'Reward APR': reward_apr
-            })
+                # Keep the highest APY for each symbol (remove duplicates)
+                if symbol not in all_apy_data or total_apy > all_apy_data[symbol]['Total APY']:
+                    all_apy_data[symbol] = {
+                        'symbol': symbol,
+                        'Total APY': total_apy,
+                        'Base APY': supply_apy,
+                        'Reward APR': reward_apr
+                    }
+        
+        # Convert to list for charting
+        apy_data = list(all_apy_data.values())
 
         if apy_data:
             # Sort apy_data by Total APY in descending order
@@ -567,8 +621,9 @@ def create_supervault_section(vault_data: dict) -> html.Div:
             if alloc > 0
         ]
         
-        # Track which protocols we've processed to avoid duplicates
-        processed_protocols = set()
+        # Collect all vaults by protocol
+        morpho_vaults = []
+        euler_vaults = []
         
         print(f"\nChecking protocols for vault {vault_address}:")
         for vault_data, allocation in active_vaults:
@@ -576,36 +631,39 @@ def create_supervault_section(vault_data: dict) -> html.Div:
             vault_address = vault_data.get('contract_address')
             
             print(f"Found protocol: {protocol_name} with allocation {allocation}%")
-            
-            # Skip if we've already processed this protocol
-            if protocol_name in processed_protocols:
-                print(f"Skipping {protocol_name} - already processed")
-                continue
                 
             try:
                 if protocol_name == 'morpho' and vault_address:
                     print(f"Processing Morpho vault: {vault_address}")
                     morpho_data = Morpho().get_vault(vault_address)
                     if morpho_data:
-                        morpho_charts = create_morpho_charts(morpho_data)
-                        if morpho_charts:
-                            charts_data.append(('morpho', morpho_charts))
-                            processed_protocols.add('morpho')
-                            print("Successfully added Morpho charts")
+                        morpho_vaults.append((morpho_data, allocation))
+                        print(f"Added Morpho vault with {allocation}% allocation")
                 elif protocol_name == 'euler' and vault_address:
                     print(f"Processing Euler vault: {vault_address}")
                     chain_id = vault_data.get('chain', {}).get('id')
                     if chain_id:
                         euler_data = Euler(chain_id).get_vault_ltv(vault_address)
                         if euler_data:
-                            euler_charts = create_euler_charts(euler_data)
-                            if euler_charts:
-                                charts_data.append(('euler', euler_charts))
-                                processed_protocols.add('euler')
-                                print("Successfully added Euler charts")
+                            euler_vaults.append(euler_data)
+                            print("Added Euler vault")
             except Exception as e:
                 print(f"Error processing {protocol_name} vault {vault_address}: {str(e)}")
                 continue
+        
+        # Create aggregated charts for collected protocol data
+        if morpho_vaults:
+            print(f"Creating aggregated Morpho charts from {len(morpho_vaults)} vaults")
+            morpho_charts = create_morpho_charts(morpho_vaults)
+            if morpho_charts:
+                charts_data.append(('morpho', morpho_charts))
+                print("Successfully added Morpho charts")
+        
+        if euler_vaults:
+            euler_charts = create_euler_charts(euler_vaults)
+            if euler_charts:
+                charts_data.append(('euler', euler_charts))
+                print("Successfully added Euler charts")
         
         # Create the section with charts at the top
         section_children = [create_supervault_header(vault_info)]
@@ -682,37 +740,40 @@ def process_vault_data(vault_data, all_vaults_data, vault_instances):
         charts_data = []
         active_vaults = [(v, a) for v, a in whitelisted_vault_data if a > 0]
         
-        # Track which protocols we've processed to avoid duplicates
-        processed_protocols = set()
+        # Collect all vaults by protocol
+        morpho_vaults = []
+        euler_vaults = []
         
-        for vault_data, _ in active_vaults:
+        for vault_data, allocation in active_vaults:
             protocol_name = vault_data.get('protocol', {}).get('name', '').lower()
             vault_address = vault_data.get('contract_address')
             
-            # Skip if we've already processed this protocol
-            if protocol_name in processed_protocols:
-                continue
-                
             try:
                 if protocol_name == 'morpho' and vault_address:
                     morpho_data = Morpho().get_vault(vault_address)
                     if morpho_data:
-                        morpho_charts = create_morpho_charts(morpho_data)
-                        if morpho_charts:
-                            charts_data.append(('morpho', morpho_charts))
-                            processed_protocols.add('morpho')
+                        morpho_vaults.append((morpho_data, allocation))
                 elif protocol_name == 'euler' and vault_address:
                     chain_id = vault_data.get('chain', {}).get('id')
                     if chain_id:
                         euler_data = Euler(chain_id).get_vault_ltv(vault_address)
                         if euler_data:
-                            euler_charts = create_euler_charts(euler_data)
-                            if euler_charts:
-                                charts_data.append(('euler', euler_charts))
-                                processed_protocols.add('euler')
+                            euler_vaults.append(euler_data)
             except Exception as e:
                 print(f"Error fetching protocol data for {protocol_name}: {str(e)}")
+                traceback.print_exc()
                 continue
+        
+        # Create charts for collected protocol data
+        if morpho_vaults:
+            morpho_charts = create_morpho_charts(morpho_vaults)
+            if morpho_charts:
+                charts_data.append(('morpho', morpho_charts))
+        
+        if euler_vaults:
+            euler_charts = create_euler_charts(euler_vaults)
+            if euler_charts:
+                charts_data.append(('euler', euler_charts))
                 
         process_metrics['protocol_calls'] = time.time() - protocol_start
         

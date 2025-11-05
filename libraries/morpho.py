@@ -47,10 +47,12 @@ class Morpho:
         vaults = result.get('vaults', {}).get('items', [])
         
         if not vaults:
+            print(f"No vaults found for address: {vault_address}")
             return None
             
         # Restructure the response to match the expected format
         vault_data = vaults[0]
+        
         return {
             'address': vault_data['address'],
             'state': vault_data['state']
